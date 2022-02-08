@@ -266,4 +266,4 @@ def remove_background_mask(image: ndarray, smoothing: float = 1, sigmoid_cutoff:
     image = adjust_sigmoid(image, cutoff = sigmoid_cutoff, gain = 10)
 
     # Find background threshold and return only foreground
-    return image > threshold_triangle(image, nbins = 10)
+    return image < threshold_triangle(image, nbins = 10)

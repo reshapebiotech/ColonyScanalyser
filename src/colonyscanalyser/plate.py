@@ -195,6 +195,26 @@ class Plate(GrowthCurve, Identified, IdentifiedCollection, Named, Circle):
             save_path.joinpath(file_name)
         )
 
+    def slice_plate_image(self, image: ndarray, background_color: Tuple = 0) -> ndarray:
+        """
+        Split an image into a plate subimage and delete background
+
+        Slices according to the Plate instances in the current collection
+
+        :param image: an image as a numpy array
+        :returns: a doct of plate images with the plate ID number as the key
+        """
+        from .imaging import cut_image_circle
+
+        return cut_image_circle(
+                image,
+                center = self.center,
+                radius = self.radius - self.edge_cut,
+                background_color = background_color
+            )
+
+
+
 
 class PlateCollection(IdentifiedCollection):
     """
@@ -348,7 +368,7 @@ class PlateCollection(IdentifiedCollection):
             headers
         )
 
-    def slice_plate_image(self, image: ndarray, background_color: Tuple = 0) -> Dict[int, ndarray]:
+    def slice_plate_images(self, image: ndarray, background_color: Tuple = 0) -> Dict[int, ndarray]:
         """
         Split an image into individual plate subimages and delete background
 
@@ -357,16 +377,10 @@ class PlateCollection(IdentifiedCollection):
         :param image: an image as a numpy array
         :returns: a doct of plate images with the plate ID number as the key
         """
-        from .imaging import cut_image_circle
         images = dict()
 
         for plate in self.items:
-            images[plate.id] = cut_image_circle(
-                image,
-                center = plate.center,
-                radius = plate.radius - plate.edge_cut,
-                background_color = background_color
-            )
+            images[plate.id] = plate.slice_plate_image(image, background_color)
 
         return images
 

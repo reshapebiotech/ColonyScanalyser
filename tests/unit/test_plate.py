@@ -232,7 +232,7 @@ class TestPlateCollection:
                     "0.0", "0.0", "0.0", "0.0", "0.0", "0.0", "0.0"
                 ]
 
-        def test_slice_plate_image(self, image_circle):
+        def test_slice_plate_images(self, image_circle):
             plates = PlateCollection(shape = (1, 1))
             plates.add(
                 id = 1,
@@ -241,7 +241,7 @@ class TestPlateCollection:
                 center = (102, 102)
             )
 
-            images = plates.slice_plate_image(image_circle)
+            images = plates.slice_plate_images(image_circle)
 
             assert len(images) == 1
             assert images[1].shape == (141, 141)

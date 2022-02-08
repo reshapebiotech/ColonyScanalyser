@@ -3,7 +3,8 @@ from typing import Optional, List
 from pathlib import Path
 from datetime import datetime, timedelta
 from re import search
-from numpy import ndarray
+from numpy import ndarray, uint8
+from colonyscanalyser.plate import Plate
 from skimage.transform._geometric import GeometricTransform
 from .base import IdentifiedCollection, Unique, TimeStampElapsed
 from .file_access import file_exists
@@ -159,6 +160,25 @@ class ImageFile(Unique, TimeStampElapsed):
                     plugin = "pil"
                 else:
                     raise
+    
+
+    def draw_colonies_for_plate(self, plate: Plate):
+        """
+        Draws the colonies for a plate onto the image
+
+        :param plate: the plate to draw the colonies for
+        """
+        import numpy as np
+        from skimage.morphology import binary_erosion
+        from skimage.color import label2rgb
+        plate_slice = plate.slice_plate_image(self.image_gray).copy()
+        labels = np.zeros(plate_slice.shape[:2])
+        for colony in plate.items:
+            if tp := next((tp for tp in colony.timepoints if tp.timestamp == self.timestamp_elapsed), None):
+                min_row, min_col, max_row, max_col = tp.bbox
+                img = tp.image * tp.label # get the label image
+                labels[min_row:max_row, min_col:max_col] += img
+        return label2rgb(labels,plate_slice, bg_label = 0)
 
 
 class ImageFileCollection(IdentifiedCollection):

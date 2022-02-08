@@ -44,33 +44,35 @@ def argparse_init(*args, **kwargs) -> argparse.ArgumentParser:
 
     # Mutually exclusive options
     output = parser.add_mutually_exclusive_group()
-    
-    parser.add_argument("path", type = str,
-                        help = "Image files location", default = None)
-    parser.add_argument("-a", "--animation", action = "store_true",
-                        help = "Output animated plots and videos")
-    parser.add_argument("-d", "--dots-per-inch", type = int, default = config.DOTS_PER_INCH, metavar = "N",
-                        help = "The image DPI (dots per inch) setting")
-    parser.add_argument("--image-align", nargs = "?", default = AlignStrategy.quick.name, const = AlignStrategy.quick.name, choices = [strategy.name for strategy in AlignStrategy],
-                        help = "The strategy used for aligning images for analysis")
-    parser.add_argument("--image-align-tolerance", type = float, default = config.ALIGNMENT_TOLERANCE,
-                        help = "The tolerance value allowed when aligning images. 0 means the images must match exactly", metavar = "N")
-    parser.add_argument("--image-formats", default = config.SUPPORTED_FORMATS, action = "version", version = str(config.SUPPORTED_FORMATS),
-                        help = "The supported image formats")
-    parser.add_argument("--no-plots", action = "store_true", help = "Prevent output of plot images to disk")
-    parser.add_argument("--plate-edge-cut", type = int, default = config.PLATE_EDGE_CUT,
-                        help = "The exclusion area from the plate edge, as a percentage of the plate diameter", metavar = "N")
-    parser.add_argument("--plate-labels", type = str, nargs = "*", default = list(), metavar = "LABEL",
-                        help = "A list of labels to identify each plate. Plates are ordered from top left, in rows. Example usage: --plate_labels plate1 plate2")
-    parser.add_argument("--plate-lattice", type = int, nargs = 2, default = config.PLATE_LATTICE, metavar = ("ROW", "COL"),
-                        help = "The row and column co-ordinate layout of plates. Example usage: --plate_lattice 3 3")
-    parser.add_argument("--plate-size", type = int, default = config.PLATE_SIZE, help = "The plate diameter, in millimetres", metavar = "N")
-    output.add_argument("-s", "--silent", action = "store_true", help = "Silence all output to console")
-    parser.add_argument("--single-process", action = "store_true", help = "Use only a single CPU core, slower but less resource intensive")
-    parser.add_argument("-u", "--use-cached-data", action = "store_true", help = "Allow use of previously calculated data")
-    output.add_argument("-v", "--verbose", action = "store_true", help = "Output extra information to console")
-    parser.add_argument("--version", action = "version", version = f"ColonyScanlayser {metadata.version('colonyscanalyser')}",
-                        help = "The package version number")
+
+    parser.add_argument("path", type=str,
+                        help="Image files location", default=None)
+    parser.add_argument("-a", "--animation", action="store_true",
+                        help="Output animated plots and videos")
+    parser.add_argument("-d", "--dots-per-inch", type=int, default=config.DOTS_PER_INCH, metavar="N",
+                        help="The image DPI (dots per inch) setting")
+    parser.add_argument("--image-align", nargs="?", default=AlignStrategy.quick.name, const=AlignStrategy.quick.name, choices=[strategy.name for strategy in AlignStrategy],
+                        help="The strategy used for aligning images for analysis")
+    parser.add_argument("--image-align-tolerance", type=float, default=config.ALIGNMENT_TOLERANCE,
+                        help="The tolerance value allowed when aligning images. 0 means the images must match exactly", metavar="N")
+    parser.add_argument("--image-formats", default=config.SUPPORTED_FORMATS, action="version", version=str(config.SUPPORTED_FORMATS),
+                        help="The supported image formats")
+    parser.add_argument("--no-plots", action="store_true", help="Prevent output of plot images to disk")
+    parser.add_argument("--plate-edge-cut", type=int, default=config.PLATE_EDGE_CUT,
+                        help="The exclusion area from the plate edge, as a percentage of the plate diameter", metavar="N")
+    parser.add_argument("--plate-labels", type=str, nargs="*", default=list(), metavar="LABEL",
+                        help="A list of labels to identify each plate. Plates are ordered from top left, in rows. Example usage: --plate_labels plate1 plate2")
+    parser.add_argument("--plate-lattice", type=int, nargs=2, default=config.PLATE_LATTICE, metavar=("ROW", "COL"),
+                        help="The row and column co-ordinate layout of plates. Example usage: --plate_lattice 3 3")
+    parser.add_argument("--plate-size", type=int, default=config.PLATE_SIZE,
+                        help="The plate diameter, in millimetres", metavar="N")
+    output.add_argument("-s", "--silent", action="store_true", help="Silence all output to console")
+    parser.add_argument("--single-process", action="store_true",
+                        help="Use only a single CPU core, slower but less resource intensive")
+    parser.add_argument("-u", "--use-cached-data", action="store_true", help="Allow use of previously calculated data")
+    output.add_argument("-v", "--verbose", action="store_true", help="Output extra information to console")
+    parser.add_argument("--version", action="version", version=f"ColonyScanlayser {metadata.version('colonyscanalyser')}",
+                        help="The package version number")
 
     return parser
 
@@ -80,7 +82,7 @@ def plates_colonies_from_timepoints(
     timepoints: Dict[int, List[Colony.Timepoint]],
     timepoints_distance: float = 1,
     timestamp_diff_std: float = 10,
-    pool_size = 1
+    pool_size=1
 ) -> Plate:
     """
     Group a list of Timepoints to Colony objects, and populate in a Plate instance
@@ -101,10 +103,10 @@ def plates_colonies_from_timepoints(
     ]
 
     # Process and filter Timepoints to Colony objects in parallel
-    with Pool(processes = pool_size) as pool:
+    with Pool(processes=pool_size) as pool:
         plates.items = pool.starmap(
-            func = _plate_colonies_from_timepoints_filtered,
-            iterable = timepoints_iter
+            func=_plate_colonies_from_timepoints_filtered,
+            iterable=timepoints_iter
         )
 
     return plates
@@ -125,39 +127,55 @@ def segment_image(
     :param area_min: the minimum area for a colony, in pixels
     :returns: a segmented and labelled image as a numpy array
     """
-    from numpy import unique, isin
+    from numpy import unique, isin, ones, zeros, clip
     from skimage.measure import regionprops, label
     from skimage.morphology import remove_small_objects, binary_erosion
     from skimage.segmentation import clear_border
+    from skimage.segmentation import watershed
+    from skimage.feature import peak_local_max
+    from scipy import ndimage as ndi
 
-    plate_image = imaging.remove_background_mask(plate_image, smoothing = 0.5)
+
+    diff = clip(plate_noise_mask - plate_image, 0, 255)
+
+    plate_image = ~imaging.remove_background_mask(diff, smoothing=1, sigmoid_cutoff=0) #.6
 
     if plate_mask is not None:
         # Remove mask from image
         plate_image = plate_image & plate_mask
         # Remove objects touching the mask border
-        plate_image = clear_border(plate_image, bgval = 0, mask = binary_erosion(plate_mask))
+        plate_image = clear_border(plate_image,
+                                   bgval=0,
+                                   mask=binary_erosion(plate_mask)
+                                   )
     else:
         # Remove objects touching the image border
-        plate_image = clear_border(plate_image, buffer_size = 2, bgval = 0)
+        plate_image = clear_border(plate_image, buffer_size=2, bgval=0)
 
-    plate_image = label(plate_image, connectivity = 2)
+    distance = ndi.distance_transform_edt(plate_image)
+    local_max_coords = peak_local_max(distance, min_distance=7)
+    local_max_mask = zeros(distance.shape, dtype=bool)
+    local_max_mask[tuple(local_max_coords.T)] = True
+    markers = label(local_max_mask)
+
+    # labels = label(plate_image, connectivity=2)
+    labels = watershed(-distance, markers, mask=plate_image)
 
     # Remove background noise
-    if len(unique(plate_image)) > 1:
-        plate_image = remove_small_objects(plate_image, min_size = area_min)
+    if len(unique(labels)) > 1:
+        labels = remove_small_objects(labels, min_size=area_min)
 
     # Remove colonies that have grown on top of image artefacts or static objects
     if plate_noise_mask is not None:
-        plate_noise_image = imaging.remove_background_mask(plate_noise_mask, smoothing = 0.5)
+        plate_noise_image = imaging.remove_background_mask(plate_noise_mask, smoothing=1, sigmoid_cutoff=.7)
         if len(unique(plate_noise_mask)) > 1:
-            noise_mask = remove_small_objects(plate_noise_image, min_size = area_min)
+            noise_mask = remove_small_objects(plate_noise_image, min_size=area_min)
         # Remove all objects where there is an existing static object
-        exclusion = unique(plate_image[noise_mask])
-        exclusion_mask = isin(plate_image, exclusion[exclusion > 0])
-        plate_image[exclusion_mask] = 0
+        exclusion = unique(labels[noise_mask])
+        exclusion_mask = isin(labels, exclusion[exclusion > 0])
+        labels[exclusion_mask] = 0
 
-    return plate_image
+    return labels
 
 
 def image_file_to_timepoints(
@@ -175,18 +193,25 @@ def image_file_to_timepoints(
     """
     from collections import defaultdict
     from skimage.color import rgb2gray
+    from skimage.io import imsave
+    from skimage import img_as_ubyte, img_as_float
+    from skimage.color import label2rgb
 
     plate_timepoints = defaultdict(list)
 
     # Split image into individual plates
-    plate_images = plates.slice_plate_image(image_file.image)
+    plate_images = plates.slice_plate_images(image_file.image)
 
     for plate_id, plate_image in plate_images.items():
         plate_image_gray = rgb2gray(plate_image)
+
         # Segment each image
-        plate_images[plate_id] = segment_image(plate_image_gray, plate_mask = plate_image_gray > 0, plate_noise_mask = plate_noise_masks[plate_id], area_min = 1.5)
+        plate_images[plate_id] = segment_image(plate_image_gray, plate_mask=plate_image_gray >
+                                               0, plate_noise_mask=plate_noise_masks[plate_id], area_min=1.5)
+        # imsave(f'asdf/{image_file.id}.png', plate_images[plate_id])
         # Create Timepoint objects for each plate
-        plate_timepoints[plate_id].extend(timepoints_from_image(plate_images[plate_id], image_file.timestamp_elapsed, image = plate_image))
+        plate_timepoints[plate_id].extend(timepoints_from_image(
+            plate_images[plate_id], image_file.timestamp_elapsed, image=plate_image))
 
     return plate_timepoints
 
@@ -195,7 +220,8 @@ def _plate_colonies_from_timepoints_filtered(
     plate: Plate,
     timepoints: List[Colony.Timepoint],
     timepoints_distance: float = 1,
-    timestamp_diff_std: float = 10
+    timestamp_diff_std: float = 10,
+    should_filter: bool = True
 ) -> Plate:
     """
     Group a list of Timepoints to Colony objects, and filter to return only valid colonies
@@ -208,12 +234,14 @@ def _plate_colonies_from_timepoints_filtered(
     :param timestamp_diff_std: the maximum allowed deviation in timestamps (i.e. likelihood of missing data)
     :returns: the plate instance with a collection of Colony instances
     """
+
     if len(timepoints) > 0:
         # Group Timepoints by Euclidean distance
-        plate.items = colonies_from_timepoints(timepoints, distance_tolerance = timepoints_distance)
+        plate.items = colonies_from_timepoints(timepoints, distance_tolerance=timepoints_distance)
 
         # Filter colonies to remove noise, background objects and merged colonies
-        plate.items = colonies_filtered(plate.items, timestamp_diff_std)
+        if should_filter:
+            plate.items = colonies_filtered(plate.items, timestamp_diff_std)
 
     return plate
 
@@ -221,10 +249,10 @@ def _plate_colonies_from_timepoints_filtered(
 # flake8: noqa: C901
 def main():
     parser = argparse_init(
-        description = "An image analysis tool for measuring microorganism colony growth",
-        formatter_class = argparse.ArgumentDefaultsHelpFormatter,
-        usage = "%(prog)s '/image/file/path/' [OPTIONS]"
-        )
+        description="An image analysis tool for measuring microorganism colony growth",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        usage="%(prog)s '/image/file/path/' [OPTIONS]"
+    )
 
     # Retrieve and parse arguments
     args = parser.parse_args()
@@ -234,9 +262,9 @@ def main():
     IMAGE_ALIGN_TOLERANCE = args.image_align_tolerance
     IMAGE_FORMATS = args.image_formats
     PLOTS = not args.no_plots
-    PLATE_LABELS = {plate_id: label for plate_id, label in enumerate(args.plate_labels, start = 1)}
+    PLATE_LABELS = {plate_id: label for plate_id, label in enumerate(args.plate_labels, start=1)}
     PLATE_LATTICE = tuple(args.plate_lattice)
-    PLATE_SIZE = int(imaging.mm_to_pixels(args.plate_size, dots_per_inch = args.dots_per_inch))
+    PLATE_SIZE = int(imaging.mm_to_pixels(args.plate_size, dots_per_inch=args.dots_per_inch))
     PLATE_EDGE_CUT = int(round(PLATE_SIZE * (args.plate_edge_cut / 100)))
     SILENT = args.silent
     USE_CACHED = args.use_cached_data
@@ -244,7 +272,7 @@ def main():
     POOL_MAX = 1
     if not args.single_process:
         POOL_MAX = cpu_count() - 1 if cpu_count() > 1 else 1
-        
+
     if not SILENT:
         print("Starting ColonyScanalyser analysis")
     if VERBOSE and POOL_MAX > 1:
@@ -268,7 +296,7 @@ def main():
         plates = file_access.load_file(
             BASE_PATH.joinpath(config.DATA_DIR, config.CACHED_DATA_FILE_NAME),
             file_access.CompressionMethod.LZMA,
-            pickle = True
+            pickle=True
         )
         # Check that segmented image data has been loaded for all plates
         # Also that data is not from an older format (< v0.4.0)
@@ -285,39 +313,40 @@ def main():
 
     if not USE_CACHED or plates is None:
         # Find images in working directory. Raises IOError if images not loaded correctly
-        image_files = ImageFileCollection.from_path(BASE_PATH, IMAGE_FORMATS, cache_images = False)
+        image_files = ImageFileCollection.from_path(BASE_PATH, IMAGE_FORMATS, cache_images=False)
         if not SILENT:
             print(f"{image_files.count} images found")
 
         # Verify image alignment
         if IMAGE_ALIGN_STRATEGY != AlignStrategy.none:
             if not SILENT:
-                print(f"Verifying image alignment with '{IMAGE_ALIGN_STRATEGY.name}' strategy. This process will take some time")
-            
+                print(
+                    f"Verifying image alignment with '{IMAGE_ALIGN_STRATEGY.name}' strategy. This process will take some time")
+
             # Initialise the model and determine which images need alignment
             align_model, image_files_align = calculate_transformation_strategy(
                 image_files.items,
                 IMAGE_ALIGN_STRATEGY,
-                tolerance = IMAGE_ALIGN_TOLERANCE
+                tolerance=IMAGE_ALIGN_TOLERANCE
             )
-            
+
             # Apply image alignment according to selected strategy
             if len(image_files_align) > 0:
                 if not SILENT:
                     print(f"{len(image_files_align)} of {image_files.count} images require alignment")
 
-                with Pool(processes = POOL_MAX) as pool:
+                with Pool(processes=POOL_MAX) as pool:
                     results = list()
                     job = pool.imap_unordered(
-                        func = partial(apply_align_transform, align_model = align_model),
-                        iterable = image_files_align,
-                        chunksize = 2
+                        func=partial(apply_align_transform, align_model=align_model),
+                        iterable=image_files_align,
+                        chunksize=2
                     )
                     # Store results and update progress bar
-                    for i, result in enumerate(job, start = 1):
+                    for i, result in enumerate(job, start=1):
                         results.append(result)
                         if not SILENT:
-                            utilities.progress_bar((i / len(image_files_align)) * 100, message = "Correcting image alignment")
+                            utilities.progress_bar((i / len(image_files_align)) * 100, message="Correcting image alignment")
 
                     image_files.update(results)
 
@@ -337,12 +366,12 @@ def main():
 
                 # Create new Plate instances to store the information
                 plates = PlateCollection.from_image(
-                    shape = PLATE_LATTICE,
-                    image = image_file.image_gray,
-                    diameter = PLATE_SIZE,
-                    search_radius = PLATE_SIZE // 20,
-                    edge_cut = PLATE_EDGE_CUT,
-                    labels = PLATE_LABELS
+                    shape=PLATE_LATTICE,
+                    image=image_file.image_gray,
+                    diameter=PLATE_SIZE,
+                    search_radius=PLATE_SIZE // 20,
+                    edge_cut=PLATE_EDGE_CUT,
+                    labels=PLATE_LABELS
                 )
 
                 if not plates.count > 0:
@@ -350,30 +379,30 @@ def main():
                         print(f"Unable to locate plates in image: {image_file.file_path}")
                         print(f"Processing unable to continue")
                     sys.exit()
-                
+
                 if VERBOSE:
                     for plate in plates.items:
                         print(f"Plate {plate.id} center: {plate.center}")
 
             # Use the first plate image as a noise mask
-            plate_noise_masks = plates.slice_plate_image(image_file.image_gray)
+            plate_noise_masks = plates.slice_plate_images(image_file.image_gray)
 
         if not SILENT:
             print("Processing colony data from all images")
 
         # Process images to Timepoints
-        with Pool(processes = POOL_MAX) as pool:
+        with Pool(processes=POOL_MAX) as pool:
             results = list()
             job = pool.imap(
-                func = partial(image_file_to_timepoints, plates = plates, plate_noise_masks = plate_noise_masks),
-                iterable = image_files.items,
-                chunksize = 2
+                func=partial(image_file_to_timepoints, plates=plates, plate_noise_masks=plate_noise_masks),
+                iterable=image_files.items,
+                chunksize=2
             )
             # Store results and update progress bar
-            for i, result in enumerate(job, start = 1):
+            for i, result in enumerate(job, start=1):
                 results.append(result)
                 if not SILENT:
-                    utilities.progress_bar((i / image_files.count) * 100, message = "Processing images")
+                    utilities.progress_bar((i / image_files.count) * 100, message="Processing images")
             plate_timepoints = utilities.dicts_merge(list(results))
 
         if not SILENT:
@@ -384,7 +413,8 @@ def main():
         timestamp_diff_std += config.COLONY_TIMESTAMP_DIFF_MAX
 
         # Group and consolidate Timepoints into Colony instances
-        plates = plates_colonies_from_timepoints(plates, plate_timepoints, config.COLONY_DISTANCE_MAX, timestamp_diff_std, POOL_MAX)
+        plates = plates_colonies_from_timepoints(
+            plates, plate_timepoints, config.COLONY_DISTANCE_MAX, timestamp_diff_std, POOL_MAX)
 
         if not any([plate.count for plate in plates.items]):
             if not SILENT:
@@ -408,7 +438,7 @@ def main():
     # Store colony data in CSV format
     if not SILENT:
         print("Saving data to CSV")
-        
+
     save_path = BASE_PATH.joinpath(config.DATA_DIR)
     for plate in plates.items:
         # Save data for all colonies on one plate
@@ -430,19 +460,20 @@ def main():
                 print("Saving plots")
             # Summary plots for all plates
             plots.plot_growth_curve(plates.items, save_path)
-            plots.plot_appearance_frequency(plates.items, save_path, timestamps = image_files.timestamps_elapsed)
-            plots.plot_appearance_frequency(plates.items, save_path, timestamps = image_files.timestamps_elapsed, bar = True)
+            plots.plot_appearance_frequency(plates.items, save_path, timestamps=image_files.timestamps_elapsed)
+            plots.plot_appearance_frequency(plates.items, save_path, timestamps=image_files.timestamps_elapsed, bar=True)
             plots.plot_doubling_map(plates.items, save_path)
             plots.plot_colony_map(image_files.items[-1].image, plates.items, save_path)
 
             for plate in plates.items:
                 if VERBOSE:
                     print(f"Saving plots for plate #{plate.id}")
-                save_path_plate = file_access.create_subdirectory(save_path, file_access.file_safe_name([f"plate{plate.id}", plate.name]))
+                save_path_plate = file_access.create_subdirectory(
+                    save_path, file_access.file_safe_name([f"plate{plate.id}", plate.name]))
                 # Plot colony growth curves, ID map and time of appearance for each plate
                 plots.plot_growth_curve([plate], save_path_plate)
-                plots.plot_appearance_frequency([plate], save_path_plate, timestamps = image_files.timestamps_elapsed)
-                plots.plot_appearance_frequency([plate], save_path_plate, timestamps = image_files.timestamps_elapsed, bar = True)
+                plots.plot_appearance_frequency([plate], save_path_plate, timestamps=image_files.timestamps_elapsed)
+                plots.plot_appearance_frequency([plate], save_path_plate, timestamps=image_files.timestamps_elapsed, bar=True)
 
         if ANIMATION:
             # Plot individual plate images as an animation
@@ -454,19 +485,19 @@ def main():
                 plates,
                 image_files,
                 save_path,
-                fps = 8,
-                pool_max = POOL_MAX,
-                image_size_maximum = (800, 800)
+                fps=8,
+                pool_max=POOL_MAX,
+                image_size_maximum=(800, 800)
             )
             # Smaller images
             plots.plot_plate_images_animation(
                 plates,
                 image_files,
                 save_path,
-                fps = 8,
-                pool_max = POOL_MAX,
-                image_size = (250, 250),
-                image_name = "plate_image_animation_small"
+                fps=8,
+                pool_max=POOL_MAX,
+                image_size=(250, 250),
+                image_name="plate_image_animation_small"
             )
 
     else:

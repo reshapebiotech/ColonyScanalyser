@@ -9,6 +9,7 @@ from .base import Identified, Named
 from .utilities import round_tuple_floats
 from .imaging import rgb_to_name
 from .growth_curve import GrowthCurve
+from skimage.measure._regionprops import RegionProperties
 
 
 class Colony(Identified, Named, GrowthCurve):
@@ -27,6 +28,10 @@ class Colony(Identified, Named, GrowthCurve):
         diameter: float
         perimeter: float
         color_average: tuple
+        rp: List[RegionProperties] = None
+        bbox: Tuple[int,int,int,int] = None,
+        image: ndarray = None
+        label: int = None
 
         def __iter__(self):
             return iter([
@@ -208,12 +213,19 @@ def timepoints_from_image(
             center = rp.centroid,
             diameter = rp.equivalent_diameter,
             perimeter = rp.perimeter,
-            color_average = color_average
+            color_average = color_average,
+            bbox = rp.bbox,
+            image = rp.image,
+            label = rp.label
+            # rp = rp
         )
 
         colonies.append(timepoint_data)
 
     return colonies
+
+# def ris_colonies_filtered(colonies: List[Colony], timestamp_diff_std: float = 10) -> List[Colony]:
+
 
 
 def colonies_filtered(colonies: List[Colony], timestamp_diff_std: float = 10) -> List[Colony]:
@@ -224,27 +236,43 @@ def colonies_filtered(colonies: List[Colony], timestamp_diff_std: float = 10) ->
     :param timestamp_diff_std: the maximum allowed deviation in timestamps (i.e. likelihood of missing data)
     :returns: a filtered list of Colony instances
     """
-    from numpy import diff
+    from numpy import diff, array
 
     # If no objects are found
     if not len(colonies) > 0:
         return colonies
 
+    def _filter_colony(colony: Colony) -> bool:
+        """
+        Filter a single colony by the following criteria:
+        1. It must have at least 3 time points
+        2. Area must be larger than 50 pixels
+        3. The mean growth per time point must be greater than 1.4
+        """
+        area = array([tp.area for tp in colony.timepoints])
+
+        return area.max() > 50 and \
+               diff(area).mean() > 1.4 and \
+               len(colony.timepoints) >= 3
+
     # Filter colonies to remove noise, background objects and merged colonies
-    colonies = list(filter(
-        lambda colony:
+    colonies = list(filter(_filter_colony,colonies))
             # Remove objects that do not have sufficient data points
-            len(colony.timepoints) > config.COLONY_TIMEPOINTS_MIN and
+            # len(colony.timepoints) > config.COLONY_TIMEPOINTS_MIN and
+
+
+
+
+            
             # No colonies should be visible at the start of the experiment
-            colony.time_of_appearance.total_seconds() > 0 and
+            # colony.time_of_appearance.total_seconds() > 0 and
             # Remove objects with large gaps in the data
-            diff([t.timestamp.total_seconds() for t in colony.timepoints[1:]]).std() < timestamp_diff_std and
+            # diff([t.timestamp.total_seconds() for t in colony.timepoints[1:]]).std() < timestamp_diff_std * 3 and
             # Remove object that do not show growth, these are not colonies
-            colony.timepoint_last.area > config.COLONY_GROWTH_FACTOR_MIN * colony.timepoint_first.area and
+            # colony.timepoint_last.area > config.COLONY_GROWTH_FACTOR_MIN * colony.timepoint_first.area and
             # Objects that appear with a large initial area are either merged colonies or noise
-            colony.timepoint_first.area < config.COLONY_FIRST_AREA_MAX,
-            colonies
-    ))
+            # colony.timepoint_first.area < config.COLONY_FIRST_AREA_MAX,
+
 
     return colonies
 
@@ -308,7 +336,7 @@ def group_timepoints_by_center(
 
         # Compare current center with remaining centers in the list
         for j, timepoint_compare in reversed(list(enumerate(timepoints))):
-            if dist(timepoints[0].center, timepoint_compare.center) <= max_distance:
+            if dist(timepoints[0].center, timepoint_compare.center) <= 15:
                 # Remove the Timepoint to a group if within distance limit
                 centers.append(timepoints.pop(j))
 

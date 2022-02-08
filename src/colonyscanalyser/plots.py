@@ -579,19 +579,19 @@ def _image_file_to_plate_images(
     from skimage.transform import resize
 
     # Slice the image into individual plate images
-    sliced_images = plate_collection.slice_plate_image(image_file.image, background_color = background_color)
+    sliced_images = plate_collection.slice_plate_images(image_file.image, background_color = background_color)
     # Create PIL Image objects and resize if required
     images = dict()
     for plate_id, image in sliced_images.items():
         if image_size is not None:
             # Resize to the desired size
-            image = resize(image, image_size, preserve_range = True)
+            image = resize(image, image_size)
         # Check that the image is not over the maximum size
         if image_size_maximum is not None and image.shape > image_size_maximum:
             # Caluclate new image size while maintaining aspect ratio
             image_size = (image_size_maximum[0], image_size_maximum[0] * (image.shape[1] / image.shape[0]))
             # Resize if required
-            image = resize(image, image_size, preserve_range = True)
+            image = resize(image, image_size)
 
         # skimage.transform.resize returns an array of type float64, which Image.fromarray can't handle
         images[plate_id] = Image.fromarray(img_as_ubyte(image), mode = "RGB")
