@@ -1,13 +1,16 @@
 from __future__ import annotations
-from typing import Union, Dict, List, Tuple
+
 from collections.abc import Collection
 from datetime import timedelta
 from pathlib import Path, PurePath
 from statistics import median
+from typing import Dict, List, Tuple, Union
+
 from numpy import ndarray
+
+from ..io.file_access import file_safe_name, save_to_csv
+from ..utils.geometry import Circle
 from .base import Identified, IdentifiedCollection, Named
-from .geometry import Circle
-from .file_access import save_to_csv, file_safe_name
 from .growth_curve import GrowthCurve
 
 

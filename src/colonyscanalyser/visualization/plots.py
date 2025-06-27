@@ -1,14 +1,15 @@
-from typing import Dict, List, Tuple
 from datetime import datetime, timedelta
 from pathlib import Path
-import matplotlib.pyplot as plt
+from typing import Dict, List, Tuple
+
 import matplotlib.cm as cm
+import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 from numpy import ndarray
 
+from ..core.image_file import ImageFile, ImageFileCollection
+from ..core.plate import Plate, PlateCollection
 from .plotting import rc_to_xy
-from .plate import Plate, PlateCollection
-from .image_file import ImageFile, ImageFileCollection
 
 
 def plot_colony_map(plate_image: ndarray, plates: List[Plate], save_path: Path) -> Path:
@@ -215,8 +216,9 @@ def plot_plate_images_animation(
     :param kwargs: arguments to pass through to _image_file_to_plate_images
     :returns: a list of file path objects if the images were saved sucessfully
     """
-    from multiprocessing import Pool
     from functools import partial
+    from multiprocessing import Pool
+
     from .file_access import create_subdirectory, file_safe_name
 
     # Divide up image files between processes and assemble results
@@ -319,6 +321,7 @@ def growth_curve(
     :param line_color: a Colormap color for the median
     """
     from statistics import median
+
     from .utilities import savgol_filter
 
     if line_color is None:
@@ -514,9 +517,9 @@ def plot_doubling_map(plates: List[Plate], save_path: Path) -> Path:
     :param save_path: the directory to save the plot image
     :returns: a file path object if the plot was saved sucessfully
     """
+    from mpl_toolkits.axes_grid1 import make_axes_locatable
     from numpy import histogram2d, zeros_like
     from numpy.ma import masked_where
-    from mpl_toolkits.axes_grid1 import make_axes_locatable
 
     _, ax = plt.subplots()
     x = [0]

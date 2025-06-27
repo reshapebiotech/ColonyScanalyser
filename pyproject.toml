@@ -1,7 +1,3 @@
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
 [project]
 name = "colonyscanalyser"
 version = "0.6.2"
@@ -14,8 +10,10 @@ dependencies = [
     "numpy >= 1.18",
     "matplotlib",
     "scikit-image >= 0.25",
-    "imreg_dft",
+    "imreg-dft",
     "webcolors",
+    "opencv-python>=4.11.0.86",
+    "opencv-python-headless>=4.11.0.86",
 ]
 
 [project.scripts]
@@ -26,8 +24,9 @@ scanalyser = "colonyscanalyser.main:main"
 dev = ["pytest", "ruff", "pyright"]
 test = ["pytest"]
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/colonyscanalyser"]
+[build-system]
+requires = ["uv_build>=0.7.3,<0.8.0"]
+build-backend = "uv_build"
 
 # Ruff configuration
 [tool.ruff]
@@ -38,6 +37,4 @@ extend-exclude = ["build", "dist", ".eggs", "*.egg-info"]
 ignore = []
 
 [dependency-groups]
-dev = [
-    "pytest>=8.4.1",
-]
+dev = ["pytest>=8.4.1"]

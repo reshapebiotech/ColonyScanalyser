@@ -1,9 +1,8 @@
 from abc import ABC, abstractmethod
-from typing import Any, List, Tuple, Union
+from typing import Any, Tuple, Union
 
 from numpy import ndarray
 from skimage.transform import SimilarityTransform
-from skimage.transform._geometric import _GeometricTransform as GeometricTransform
 
 
 class AlignTransform(ABC):
@@ -11,12 +10,12 @@ class AlignTransform(ABC):
     An abstract class to provide image alignment
     """
 
-    def __init__(self, image_ref: ndarray, transform_model: GeometricTransform):
+    def __init__(self, image_ref: ndarray, transform_model):
         """
         Initialise a new instance of the AlignTransform
 
         :param image_ref: a reference image to align with
-        :param transform_model: a GeometricTransform type used when warping images to match image_ref
+        :param transform_model: a transform class (e.g., SimilarityTransform) used when warping images to match image_ref
         """
         self.image_ref = image_ref
         self.transform_model = transform_model
@@ -42,11 +41,11 @@ class AlignTransform(ABC):
         )
 
     @property
-    def transform_model(self) -> GeometricTransform:
+    def transform_model(self):
         return self._transform_model
 
     @transform_model.setter
-    def transform_model(self, val: GeometricTransform):
+    def transform_model(self, val):
         self._transform_model = val
 
     @abstractmethod
@@ -64,7 +63,7 @@ class AlignTransform(ABC):
         )
 
     @abstractmethod
-    def align_transform(self, image: ndarray, **kwargs) -> GeometricTransform:
+    def align_transform(self, image: ndarray, **kwargs):
         """
         Calculate the transformation needed to align the image with the current reference image
 
@@ -88,8 +87,8 @@ class DescriptorAlignTransform(AlignTransform):
     def __init__(
         self,
         image_ref: ndarray,
-        transform_model: GeometricTransform = SimilarityTransform,
-        descriptor_extractor_model: DescriptorExtractor = ORB,
+        transform_model=SimilarityTransform,
+        descriptor_extractor_model=ORB,
         **kwargs,
     ):
         """
@@ -98,8 +97,8 @@ class DescriptorAlignTransform(AlignTransform):
         The reference image is stored as its descriptors and keypoints as extracted by descriptor_extractor_model
 
         :param image_ref: a reference image to align with
-        :param transform_model: a GeometricTransform type used when warping images to match image_ref
-        :param descriptor_extractor_model: a DescriptorExtractor and FeatureDectector type used for image feature extraction
+        :param transform_model: a transform class used when warping images to match image_ref
+        :param descriptor_extractor_model: a DescriptorExtractor and FeatureDetector type used for image feature extraction
         :param kwargs: keyword arguments used when initialising descriptor_extractor_model
         """
         self.descriptor_extractor = descriptor_extractor_model(**kwargs)
@@ -114,7 +113,7 @@ class DescriptorAlignTransform(AlignTransform):
         self._descriptor_extractor = val
 
     @property
-    def image_ref(self) -> Tuple[List, List]:
+    def image_ref(self) -> Tuple[ndarray, ndarray]:
         """
         The reference image as its descriptors and keypoints
         """
@@ -161,7 +160,7 @@ class DescriptorAlignTransform(AlignTransform):
         # Adjust the image using the calculated transform
         return warp(image, transform.inverse, order=3, preserve_range=True)
 
-    def align_transform(self, image: ndarray, **kwargs) -> GeometricTransform:
+    def align_transform(self, image: ndarray, **kwargs):
         """
         Calculate the transformation needed to align the image with the current reference image
 
@@ -200,9 +199,14 @@ class DescriptorAlignTransform(AlignTransform):
             )
 
         # The translation needs to be inverted
-        return self.transform_model(
-            rotation=transform_robust.rotation
-        ) + self.transform_model(translation=-flip(transform_robust.translation))
+        if hasattr(transform_robust, "rotation") and hasattr(
+            transform_robust, "translation"
+        ):
+            return self.transform_model(
+                rotation=transform_robust.rotation
+            ) + self.transform_model(translation=-flip(transform_robust.translation))
+        else:
+            return transform_robust
 
     def _extract_keypoints(self, image: ndarray) -> Tuple[ndarray, ndarray]:
         """
@@ -214,21 +218,36 @@ class DescriptorAlignTransform(AlignTransform):
         from numpy import asarray
         from skimage.color import rgb2gray
 
-        from ..imaging import image_as_rgb
+        try:
+            from ..imaging import image_as_rgb
+        except ImportError:
+
+            def image_as_rgb(img):
+                if len(img.shape) == 2:
+                    return img
+                elif len(img.shape) == 3 and img.shape[2] == 3:
+                    return img
+                else:
+                    return img
 
         # ORB can only handle 2D arrays
         if len(image.shape) > 2:
             image = rgb2gray(image_as_rgb(image))
 
-        try:
+        if hasattr(self.descriptor_extractor, "detect_and_extract"):
             self.descriptor_extractor.detect_and_extract(image)
-        except AttributeError:
+        else:
             self.descriptor_extractor.detect(image)
-            self.descriptor_extractor.extract(self.descriptor_extractor.keypoints)
+            if hasattr(self.descriptor_extractor, "keypoints"):
+                self.descriptor_extractor.extract(
+                    image, self.descriptor_extractor.keypoints
+                )
 
-        return asarray(self.descriptor_extractor.descriptors), asarray(
-            self.descriptor_extractor.keypoints
-        )
+        descriptors = getattr(self.descriptor_extractor, "descriptors", None)
+        keypoints = getattr(self.descriptor_extractor, "keypoints", None)
+        return asarray(descriptors) if descriptors is not None else asarray(
+            []
+        ), asarray(keypoints) if keypoints is not None else asarray([])
 
 
 class FastFourierAlignTransform(AlignTransform):
@@ -266,11 +285,14 @@ class FastFourierAlignTransform(AlignTransform):
             self.image_ref, image, numiter=iterations, **kwargs
         )
 
-        return transform_img(
-            image, transform.scale, transform.rotation, transform.translation, bgval=0
+        scale = transform.scale if hasattr(transform, "scale") else 1.0
+        rotation = float(transform.rotation) if hasattr(transform, "rotation") else 0.0
+        translation = (
+            transform.translation if hasattr(transform, "translation") else (0, 0)
         )
+        return transform_img(image, scale, rotation, translation, bgval=0)
 
-    def align_transform(self, image: ndarray, **kwargs) -> GeometricTransform:
+    def align_transform(self, image: ndarray, **kwargs):
         """
         Calculate the transformation needed to align the image with the current reference image
 
@@ -283,9 +305,7 @@ class FastFourierAlignTransform(AlignTransform):
         return self.transform_model(matrix=transform.params)
 
     @staticmethod
-    def _align_transform(
-        image_ref: ndarray, image: ndarray, **kwargs
-    ) -> Tuple[ndarray, SimilarityTransform]:
+    def _align_transform(image_ref: ndarray, image: ndarray, **kwargs):
         """
         Calculate the transformation needed to align the image with the a reference image
 
@@ -297,11 +317,28 @@ class FastFourierAlignTransform(AlignTransform):
         from imreg_dft import similarity
         from skimage.color import rgb2gray
 
-        from ..imaging import image_as_rgb
+        try:
+            from ..imaging import image_as_rgb
+        except ImportError:
+
+            def image_as_rgb(img):
+                if len(img.shape) == 2:
+                    return img
+                elif len(img.shape) == 3 and img.shape[2] == 3:
+                    return img
+                else:
+                    return img
 
         # imreg_dft.similarity can't handle colour images
-        image_ref_gray = rgb2gray(image_as_rgb(image_ref))
-        image_gray = rgb2gray(image_as_rgb(image))
+        if len(image_ref.shape) > 2:
+            image_ref_gray = rgb2gray(image_as_rgb(image_ref))
+        else:
+            image_ref_gray = image_ref
+
+        if len(image.shape) > 2:
+            image_gray = rgb2gray(image_as_rgb(image))
+        else:
+            image_gray = image
 
         transform_params = similarity(image_ref_gray, image_gray, **kwargs)
         transform = SimilarityTransform(
@@ -314,15 +351,15 @@ class FastFourierAlignTransform(AlignTransform):
 
 
 def transform_parameters_equal(
-    align_transform: GeometricTransform,
-    align_transform_compare: Union[GeometricTransform, ndarray],
+    align_transform,
+    align_transform_compare: Union[type, ndarray],
     tolerance: float = 0.1,
 ) -> bool:
     """
-    Verify if GeometricTransform parameters are equal, within a specified relative tolerance.
+    Verify if transform parameters are equal, within a specified relative tolerance.
 
-    :param align_transform: A GeometricTransform
-    :param align_transform_compare: A GeometricTransform or 3x3 transformation matrix
+    :param align_transform: A transform object
+    :param align_transform_compare: A transform object or 3x3 transformation matrix
     :param tolerance: The maximum absolute tolerance allowed
     :returns: True if the transform parameters are equal within the tolerance value
     """
@@ -335,8 +372,11 @@ def transform_parameters_equal(
     ) and align_transform_compare.shape == (3, 3):
         transform_type = type(align_transform)
         align_transform_compare = transform_type(matrix=align_transform_compare)
-    elif not isinstance(align_transform_compare, GeometricTransform):
-        raise ValueError("The supplied type or transformation matrix is invalid")
+    elif not hasattr(align_transform_compare, "params"):
+        if isinstance(align_transform_compare, ndarray):
+            raise ValueError("Transform matrix shape must be (3, 3)")
+        else:
+            raise ValueError("The supplied type or transformation matrix is invalid")
 
     return allclose(
         align_transform.params,

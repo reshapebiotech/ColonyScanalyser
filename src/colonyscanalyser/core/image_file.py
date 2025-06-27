@@ -3,15 +3,16 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from pathlib import Path
 from re import search
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 from numpy import ndarray
+
+if TYPE_CHECKING:
+    from .plate import Plate
 from skimage.transform._geometric import _GeometricTransform as GeometricTransform
 
-from colonyscanalyser.plate import Plate
-
+from ..io.file_access import file_exists
 from .base import IdentifiedCollection, TimeStampElapsed, Unique
-from .file_access import file_exists
 
 
 class ImageFile(Unique, TimeStampElapsed):
@@ -86,6 +87,8 @@ class ImageFile(Unique, TimeStampElapsed):
         else:
             image = ImageFile._load_image(self.file_path)
         if self.align_image and self.alignment_transform is not None:
+            from imreg_dft import transform_img
+
             scale = (
                 self.alignment_transform.scale
                 if hasattr(self.alignment_transform, "scale")
@@ -161,7 +164,7 @@ class ImageFile(Unique, TimeStampElapsed):
     ) -> ndarray:
         from skimage.io import imread
 
-        from .imaging import image_as_rgb
+        from ..processing.imaging import image_as_rgb
 
         while True:
             try:
@@ -178,7 +181,7 @@ class ImageFile(Unique, TimeStampElapsed):
                 else:
                     raise
 
-    def draw_colonies_for_plate(self, plate: Plate):
+    def draw_colonies_for_plate(self, plate: "Plate"):
         """
         Draws the colonies for a plate onto the image
 

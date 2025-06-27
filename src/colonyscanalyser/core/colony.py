@@ -1,14 +1,16 @@
-from typing import Union, Dict, List, Tuple
-from datetime import timedelta
-from dataclasses import dataclass
 from collections.abc import Collection
+from dataclasses import dataclass
+from datetime import timedelta
 from functools import total_ordering
-from numpy import ndarray, log2
-from .base import Identified, Named
-from .utilities import round_tuple_floats
-from .imaging import rgb_to_name
-from .growth_curve import GrowthCurve
+from typing import Dict, List, Tuple, Union
+
+from numpy import log2, ndarray
 from skimage.measure._regionprops import RegionProperties
+
+from ..processing.imaging import rgb_to_name
+from ..utils.utilities import round_tuple_floats
+from .base import Identified, Named
+from .growth_curve import GrowthCurve
 
 
 class Colony(Identified, Named, GrowthCurve):
@@ -199,8 +201,9 @@ def timepoints_from_image(
     :param image: a colour image that image_segmented is derived from
     :returns: a list of colony objects
     """
-    from .imaging import cut_image_circle
     from skimage.measure import regionprops
+
+    from ..processing.imaging import cut_image_circle
 
     colonies = list()
 
@@ -256,7 +259,7 @@ def colonies_filtered(
     :param timestamp_diff_std: the maximum allowed deviation in timestamps (i.e. likelihood of missing data)
     :returns: a filtered list of Colony instances
     """
-    from numpy import diff, array
+    from numpy import array, diff
 
     # If no objects are found
     if not len(colonies) > 0:
