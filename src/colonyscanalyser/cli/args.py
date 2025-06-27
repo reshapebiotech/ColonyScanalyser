@@ -114,6 +114,27 @@ def create_parser(*args, **kwargs) -> argparse.ArgumentParser:
         help="Use only a single CPU core, slower but less resource intensive",
     )
     parser.add_argument(
+        "--visualize",
+        action="store_true",
+        help="Generate colony visualization overlays for each timepoint",
+    )
+    parser.add_argument(
+        "--visualization-dir",
+        type=str,
+        default="visualizations",
+        help="Directory to save visualization images",
+        metavar="DIR",
+    )
+    parser.add_argument(
+        "--visualization-types",
+        type=str,
+        nargs="*",
+        default=["ids", "comprehensive"],
+        choices=["masks", "ids", "outlines", "comprehensive"],
+        help="Types of visualizations to generate",
+        metavar="TYPE",
+    )
+    parser.add_argument(
         "-u",
         "--use-cached-data",
         action="store_true",

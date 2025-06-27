@@ -3,7 +3,7 @@ Package configuration
 """
 
 # Images
-DOTS_PER_INCH = 300
+DOTS_PER_INCH = 510
 SUPPORTED_FORMATS = ["tif", "tiff", "png", "bmp", "jpeg", "jpg"]
 ALIGNMENT_TOLERANCE = 3
 

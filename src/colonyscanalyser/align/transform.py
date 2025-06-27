@@ -13,9 +13,6 @@ class AlignTransform(ABC):
     def __init__(self, image_ref: ndarray, transform_model):
         """
         Initialise a new instance of the AlignTransform
-
-        :param image_ref: a reference image to align with
-        :param transform_model: a transform class (e.g., SimilarityTransform) used when warping images to match image_ref
         """
         self.image_ref = image_ref
         self.transform_model = transform_model
@@ -52,11 +49,6 @@ class AlignTransform(ABC):
     def align(self, image: ndarray, precise: bool = True, **kwargs) -> ndarray:
         """
         Align an image with the current reference image
-
-        :param image: an image to align
-        :param precise: peform a second alignment pass, more accurate but much slower
-        :param kwargs: keyword arguments
-        :returns: an image aligned with image_ref
         """
         raise NotImplementedError(
             "This property must be implemented in a derived class"
@@ -66,10 +58,6 @@ class AlignTransform(ABC):
     def align_transform(self, image: ndarray, **kwargs):
         """
         Calculate the transformation needed to align the image with the current reference image
-
-        :param image: an image to align
-        :param kwargs: keyword arguments
-        :returns: a transformation that will align the image with image_ref
         """
         raise NotImplementedError(
             "This property must be implemented in a derived class"
@@ -95,11 +83,6 @@ class DescriptorAlignTransform(AlignTransform):
         Initialise a new instance of the DescriptorAlignTransform
 
         The reference image is stored as its descriptors and keypoints as extracted by descriptor_extractor_model
-
-        :param image_ref: a reference image to align with
-        :param transform_model: a transform class used when warping images to match image_ref
-        :param descriptor_extractor_model: a DescriptorExtractor and FeatureDetector type used for image feature extraction
-        :param kwargs: keyword arguments used when initialising descriptor_extractor_model
         """
         self.descriptor_extractor = descriptor_extractor_model(**kwargs)
         super().__init__(image_ref, transform_model)
@@ -131,11 +114,6 @@ class DescriptorAlignTransform(AlignTransform):
     def align(self, image: ndarray, precise: bool = True, **kwargs) -> ndarray:
         """
         Align an image with the current reference image
-
-        :param image: an image to align
-        :param precise: peform a second alignment pass, more accurate but much slower
-        :param kwargs: keyword arguments passed to skimage.feature.match_descriptors
-        :returns: an image aligned with image_ref
         """
         from warnings import warn
 
@@ -163,10 +141,6 @@ class DescriptorAlignTransform(AlignTransform):
     def align_transform(self, image: ndarray, **kwargs):
         """
         Calculate the transformation needed to align the image with the current reference image
-
-        :param image: an image to align
-        :param kwargs: keyword arguments passed to skimage.feature.match_descriptors
-        :returns: a transformation that will align the image with image_ref
         """
         from numpy import flip
         from skimage.feature import match_descriptors
@@ -211,9 +185,6 @@ class DescriptorAlignTransform(AlignTransform):
     def _extract_keypoints(self, image: ndarray) -> Tuple[ndarray, ndarray]:
         """
         Detect and extract descriptors and keypoints from an image
-
-        :param image: the image to extract descriptors and keypoints
-        :returns: a tuple of descriptor and keypoints
         """
         from numpy import asarray
         from skimage.color import rgb2gray
@@ -272,11 +243,6 @@ class FastFourierAlignTransform(AlignTransform):
     def align(self, image: ndarray, precise: bool = True, **kwargs) -> ndarray:
         """
         Align an image with the current reference image
-
-        :param image: an image to align
-        :param precise: peform a second alignment pass, more accurate but much slower
-        :param kwargs: keyword arguments passed to imreg_dft.imreg.similarity
-        :returns: an image aligned with image_ref
         """
         from imreg_dft import transform_img
 
@@ -295,10 +261,6 @@ class FastFourierAlignTransform(AlignTransform):
     def align_transform(self, image: ndarray, **kwargs):
         """
         Calculate the transformation needed to align the image with the current reference image
-
-        :param image: an image to align
-        :param kwargs: keyword arguments passed to imreg_dft.imreg.similarity
-        :returns: a transformation that will align the image with image_ref
         """
         _, transform = self._align_transform(self.image_ref, image, **kwargs)
 
@@ -308,11 +270,6 @@ class FastFourierAlignTransform(AlignTransform):
     def _align_transform(image_ref: ndarray, image: ndarray, **kwargs):
         """
         Calculate the transformation needed to align the image with the a reference image
-
-        :param image_ref: a refernce image to align with
-        :param image: an image to align with image_ref
-        :param kwargs: keyword arguments passed to imreg_dft.imreg.similarity
-        :returns: a transformation that will align the image with image_ref, and the aligned greyscale image
         """
         from imreg_dft import similarity
         from skimage.color import rgb2gray
@@ -357,11 +314,6 @@ def transform_parameters_equal(
 ) -> bool:
     """
     Verify if transform parameters are equal, within a specified relative tolerance.
-
-    :param align_transform: A transform object
-    :param align_transform_compare: A transform object or 3x3 transformation matrix
-    :param tolerance: The maximum absolute tolerance allowed
-    :returns: True if the transform parameters are equal within the tolerance value
     """
     from numpy import allclose
 
