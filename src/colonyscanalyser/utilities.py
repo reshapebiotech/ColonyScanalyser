@@ -1,4 +1,4 @@
-﻿from typing import Collection, Tuple, List, Dict, Any
+from typing import Collection, Tuple, List, Dict, Any
 
 
 def round_tuple_floats(tuple_item: Tuple[float], precision: int = 2) -> Tuple[float]:
@@ -10,12 +10,18 @@ def round_tuple_floats(tuple_item: Tuple[float], precision: int = 2) -> Tuple[fl
     :returns: a tuple of rounded values
     """
     if not isinstance(tuple_item, tuple):
-        raise ValueError(f"The object must be of type 'tuple', not type '{type(tuple_item)}'")
+        raise ValueError(
+            f"The object must be of type 'tuple', not type '{type(tuple_item)}'"
+        )
 
-    return tuple(map(lambda x: isinstance(x, float) and round(x, precision) or x, tuple_item))
+    return tuple(
+        map(lambda x: isinstance(x, float) and round(x, precision) or x, tuple_item)
+    )
 
 
-def savgol_filter(measurements: Collection[Any], window: int = 15, order: int = 2) -> Collection[Any]:
+def savgol_filter(
+    measurements: Collection[Any], window: int = 15, order: int = 2
+) -> Collection[Any]:
     """
     Smooth a one dimensional set of data with a Savitzky-Golay filter
 
@@ -50,14 +56,16 @@ def progress_bar(bar_progress: float, bar_length: float = 30, message: str = "")
     from sys import stdout
 
     # Reset cursor to beginning of the line
-    stdout.write('\r')
+    stdout.write("\r")
 
     # Write to the line
-    stdout.write(f"[{'#' * int(bar_length * (bar_progress / 100)):{bar_length}s}] {int(bar_progress)}% {message}")
+    stdout.write(
+        f"[{'#' * int(bar_length * (bar_progress / 100)):{bar_length}s}] {int(bar_progress)}% {message}"
+    )
 
     # If the bar is complete, ensure the following text is on a new line
     if bar_progress == 100:
-        stdout.write('\n')
+        stdout.write("\n")
     stdout.flush()
 
 
@@ -74,7 +82,7 @@ def dicts_merge(dicts: List[dict]):
 
     results = defaultdict(list)
 
-    dict_items = map(methodcaller('items'), dicts)
+    dict_items = map(methodcaller("items"), dicts)
     for key, value in chain.from_iterable(dict_items):
         if isinstance(value, Collection) and not isinstance(value, str):
             results[key].extend(value)

@@ -1,4 +1,4 @@
-﻿from typing import Optional, Union, List
+from typing import Optional, Union, List
 from enum import Enum
 from collections.abc import Collection
 from pathlib import Path
@@ -16,7 +16,11 @@ def file_exists(file_path: Path) -> bool:
     if not isinstance(file_path, Path):
         file_path = Path(file_path)
 
-    if Path.exists(file_path) and Path.is_file(file_path) and Path.stat(file_path).st_size > 0:
+    if (
+        Path.exists(file_path)
+        and Path.is_file(file_path)
+        and Path.stat(file_path).st_size > 0
+    ):
         return True
 
     return False
@@ -53,7 +57,13 @@ def get_files_by_type(path: Path, file_extensions: List[str] = ["*"]) -> List[Pa
 
     path_list = []
     for file_extension in file_extensions:
-        path_list.extend([x for x in path.glob("*." + file_extension) if not str(x.name).startswith(".")])
+        path_list.extend(
+            [
+                x
+                for x in path.glob("*." + file_extension)
+                if not str(x.name).startswith(".")
+            ]
+        )
 
     return sorted(path_list)
 
@@ -69,7 +79,7 @@ def create_subdirectory(parent_path: Path, subdirectory: Union[Path, str]) -> Pa
     subdir_path = parent_path.joinpath(subdirectory)
 
     try:
-        subdir_path.mkdir(exist_ok = True)
+        subdir_path.mkdir(exist_ok=True)
     except Exception:
         # There are many reasons creating a directory may fail
         # Invalid filename, permissions, etc
@@ -78,7 +88,9 @@ def create_subdirectory(parent_path: Path, subdirectory: Union[Path, str]) -> Pa
     return subdir_path
 
 
-def move_to_subdirectory(file_list: List[Path], subdirectory: Union[Path, str]) -> List[Path]:
+def move_to_subdirectory(
+    file_list: List[Path], subdirectory: Union[Path, str]
+) -> List[Path]:
     """
     Move all files in a list to a subdirectory
 
@@ -117,6 +129,7 @@ class CompressionMethod(Enum):
 
     The enum values are the corresponding file suffixes
     """
+
     BZ2 = ".pbz2"
     GZIP = ".gz"
     LZMA = ".xz"
@@ -124,7 +137,9 @@ class CompressionMethod(Enum):
     NONE = ""
 
 
-def file_compression(file_path: Path, compression: CompressionMethod, access_mode: str = "r") -> Optional[object]:
+def file_compression(
+    file_path: Path, compression: CompressionMethod, access_mode: str = "r"
+) -> Optional[object]:
     """
     Allows access to a file using the desired compression method
 
@@ -135,17 +150,28 @@ def file_compression(file_path: Path, compression: CompressionMethod, access_mod
     """
     if compression == CompressionMethod.BZ2:
         import bz2
-        return bz2.BZ2File(file_path.with_suffix(CompressionMethod.BZ2.value), mode = access_mode)
+
+        return bz2.BZ2File(
+            file_path.with_suffix(CompressionMethod.BZ2.value), mode=access_mode
+        )
     elif compression == CompressionMethod.GZIP:
         import gzip
-        return gzip.GzipFile(file_path.with_suffix(CompressionMethod.GZIP.value), mode = access_mode)
+
+        return gzip.GzipFile(
+            file_path.with_suffix(CompressionMethod.GZIP.value), mode=access_mode
+        )
     elif compression == CompressionMethod.LZMA:
         import lzma
-        return lzma.LZMAFile(file_path.with_suffix(CompressionMethod.LZMA.value), mode = access_mode)
+
+        return lzma.LZMAFile(
+            file_path.with_suffix(CompressionMethod.LZMA.value), mode=access_mode
+        )
     elif compression == CompressionMethod.PICKLE:
-        return open(file_path.with_suffix(CompressionMethod.PICKLE.value), mode = access_mode)
+        return open(
+            file_path.with_suffix(CompressionMethod.PICKLE.value), mode=access_mode
+        )
     elif compression == CompressionMethod.NONE:
-        return open(file_path, mode = access_mode)
+        return open(file_path, mode=access_mode)
 
     return None
 
@@ -154,7 +180,7 @@ def load_file(
     file_path: Path,
     compression: CompressionMethod,
     access_mode: str = "rb",
-    pickle: bool = True
+    pickle: bool = True,
 ) -> Optional[object]:
     """
     Load compressed data from a file
@@ -172,10 +198,12 @@ def load_file(
     except Exception:
         return None
 
-    return load(file_open, allow_pickle = pickle)
+    return load(file_open, allow_pickle=pickle)
 
 
-def save_file(file_path: Path, data: Collection, compression: CompressionMethod) -> Path:
+def save_file(
+    file_path: Path, data: Collection, compression: CompressionMethod
+) -> Path:
     """
     Save data to specified file
 
@@ -198,7 +226,12 @@ def save_file(file_path: Path, data: Collection, compression: CompressionMethod)
         return completed
 
 
-def save_to_csv(data: Collection, headers: List[str], save_path: Union[Path, str], delimiter: str = ",") -> Path:
+def save_to_csv(
+    data: Collection,
+    headers: List[str],
+    save_path: Union[Path, str],
+    delimiter: str = ",",
+) -> Path:
     """
     Save data to CSV files on disk
 
@@ -221,18 +254,16 @@ def save_to_csv(data: Collection, headers: List[str], save_path: Union[Path, str
     save_path = save_path.with_suffix(".csv")
 
     try:
-        with open(save_path, 'w') as outfile:
+        with open(save_path, "w") as outfile:
             if isinstance(data, dict):
                 # Dictionary values are assigned by key to column headers
                 writer = csv.DictWriter(
-                    outfile,
-                    delimiter = delimiter,
-                    fieldnames = headers
+                    outfile, delimiter=delimiter, fieldnames=headers
                 )
                 writer.writeheader()
                 data = [data]
             else:
-                writer = csv.writer(outfile, delimiter = delimiter)
+                writer = csv.writer(outfile, delimiter=delimiter)
                 writer.writerow(headers)
 
             # Check if iterable contains objects that need unpacking

@@ -7,10 +7,13 @@ class Shape(ABC):
     """
     An abstract class to provide the fundamental properties of a surface
     """
+
     @property
     @abstractmethod
     def area(self) -> float:
-        raise NotImplementedError("This property must be implemented in a derived class")
+        raise NotImplementedError(
+            "This property must be implemented in a derived class"
+        )
 
     @property
     def center(self) -> Union[Tuple[float, float], Tuple[float, float, float]]:
@@ -48,7 +51,9 @@ class Shape(ABC):
     @property
     @abstractmethod
     def perimeter(self) -> float:
-        raise NotImplementedError("This property must be implemented in a derived class")
+        raise NotImplementedError(
+            "This property must be implemented in a derived class"
+        )
 
     @property
     def width(self) -> float:
@@ -66,6 +71,7 @@ class Circle(Shape):
     """
     An object to generate the properties of a circle
     """
+
     def __init__(self, diameter: float):
         self.diameter = diameter
 

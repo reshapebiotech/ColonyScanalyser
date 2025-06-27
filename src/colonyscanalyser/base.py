@@ -8,6 +8,7 @@ class Identified:
     """
     An object with a integer ID number
     """
+
     def __init__(self, id: int):
         self.id = id
 
@@ -20,7 +21,9 @@ class Identified:
         if self._id_is_valid(val):
             self._id = val
         else:
-            raise ValueError(f"'{val}' is not a valid id. An id must be a non-negative integer'")
+            raise ValueError(
+                f"'{val}' is not a valid id. An id must be a non-negative integer'"
+            )
 
     @staticmethod
     def _id_is_valid(id: int) -> bool:
@@ -39,6 +42,7 @@ class IdentifiedCollection(Collection):
     """
     An collection of Identified objects with generic methods for modifying the collection
     """
+
     def __init__(self, items: Collection = None):
         self.items = items
 
@@ -53,7 +57,7 @@ class IdentifiedCollection(Collection):
 
         A copy is returned, preventing direct changes to the collection
         """
-        return sorted(self._items.values(), key = lambda item: item.id)
+        return sorted(self._items.values(), key=lambda item: item.id)
 
     @items.setter
     def items(self, val: Collection[Identified]):
@@ -64,7 +68,9 @@ class IdentifiedCollection(Collection):
         elif val is None:
             self._items = dict()
         else:
-            raise ValueError(f"Items must be supplied as a valid Collection, not {type(val)}")
+            raise ValueError(
+                f"Items must be supplied as a valid Collection, not {type(val)}"
+            )
 
     def add(self, id: int) -> Identified:
         """
@@ -73,7 +79,7 @@ class IdentifiedCollection(Collection):
         :param id: a valid Identified ID number
         :returns: a new Identified instance
         """
-        item = Identified(id = id)
+        item = Identified(id=id)
 
         self.append(item)
 
@@ -152,9 +158,13 @@ class IdentifiedCollection(Collection):
 
     def __setitem__(self, id: int, item: Identified):
         if not isinstance(item, Identified):
-            raise TypeError(f"Item must be of type {type(Identified)}, not {type(item)}")
+            raise TypeError(
+                f"Item must be of type {type(Identified)}, not {type(item)}"
+            )
         if not self.__contains__(item):
-            raise KeyError(f"An item with ID {item.id} could not be found in the collection")
+            raise KeyError(
+                f"An item with ID {item.id} could not be found in the collection"
+            )
         self._items[item.id] = item
 
     def __reversed__(self) -> List[Identified]:
@@ -165,6 +175,7 @@ class Named:
     """
     An object with a string identifier
     """
+
     def __init__(self, name: str):
         self.name = name
 
@@ -181,6 +192,7 @@ class Unique(Identified):
     """
     An object with a auto incremented integer ID number
     """
+
     id_count = 0
 
     def __init__(self):

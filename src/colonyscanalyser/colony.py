@@ -1,10 +1,9 @@
-﻿from typing import Union, Dict, List, Tuple
+from typing import Union, Dict, List, Tuple
 from datetime import timedelta
 from dataclasses import dataclass
 from collections.abc import Collection
 from functools import total_ordering
 from numpy import ndarray, log2
-from colonyscanalyser import config
 from .base import Identified, Named
 from .utilities import round_tuple_floats
 from .imaging import rgb_to_name
@@ -16,12 +15,14 @@ class Colony(Identified, Named, GrowthCurve):
     """
     An object to hold information on a single colony over time
     """
+
     @dataclass
     @total_ordering
     class Timepoint:
         """
         Colony growth parameters at timed intervals
         """
+
         timestamp: timedelta
         area: int
         center: tuple
@@ -29,28 +30,30 @@ class Colony(Identified, Named, GrowthCurve):
         perimeter: float
         color_average: tuple
         rp: List[RegionProperties] = None
-        bbox: Tuple[int,int,int,int] = None,
+        bbox: Tuple[int, int, int, int] = (None,)
         image: ndarray = None
         label: int = None
 
         def __iter__(self):
-            return iter([
-                self.timestamp.total_seconds() // 60,
-                self.area,
-                round_tuple_floats(self.center, 2),
-                round(self.diameter, 2),
-                round(self.perimeter, 2),
-                round_tuple_floats(self.color_average, 2),
-            ])
+            return iter(
+                [
+                    self.timestamp.total_seconds() // 60,
+                    self.area,
+                    round_tuple_floats(self.center, 2),
+                    round(self.diameter, 2),
+                    round(self.perimeter, 2),
+                    round_tuple_floats(self.color_average, 2),
+                ]
+            )
 
         def __eq__(self, other):
-            return (self.timestamp == other.timestamp)
+            return self.timestamp == other.timestamp
 
         def __ne__(self, other):
             return not (self == other)
 
         def __lt__(self, other):
-            return (self.timestamp < other.timestamp)
+            return self.timestamp < other.timestamp
 
     def __init__(self, id: int, timepoints: Collection = None):
         self.id = id
@@ -60,28 +63,30 @@ class Colony(Identified, Named, GrowthCurve):
         self.timepoints = timepoints
 
     def __iter__(self):
-        return iter([
-            self.id,
-            self.time_of_appearance,
-            self.time_of_appearance.total_seconds() // 60,
-            round_tuple_floats(self.center, 2),
-            self.color_name,
-            round_tuple_floats(self.color, 2),
-            self.growth_curve.lag_time.total_seconds() // 60,
-            self.growth_curve.lag_time_std.total_seconds() // 60,
-            round(self.growth_curve.growth_rate * 60, 5),
-            round(self.growth_curve.growth_rate_std * 60, 7),
-            round(self.growth_curve.carrying_capacity, 2),
-            round(self.growth_curve.carrying_capacity_std, 4),
-            self.growth_curve.doubling_time.total_seconds() // 60,
-            self.growth_curve.doubling_time_std.total_seconds() // 60,
-            self.timepoint_first.timestamp.total_seconds() // 60,
-            round(self.timepoint_first.area, 2),
-            round(self.timepoint_first.diameter, 2),
-            self.timepoint_last.timestamp.total_seconds() // 60,
-            round(self.timepoint_last.area, 2),
-            round(self.timepoint_last.diameter, 2)
-        ])
+        return iter(
+            [
+                self.id,
+                self.time_of_appearance,
+                self.time_of_appearance.total_seconds() // 60,
+                round_tuple_floats(self.center, 2),
+                self.color_name,
+                round_tuple_floats(self.color, 2),
+                self.growth_curve.lag_time.total_seconds() // 60,
+                self.growth_curve.lag_time_std.total_seconds() // 60,
+                round(self.growth_curve.growth_rate * 60, 5),
+                round(self.growth_curve.growth_rate_std * 60, 7),
+                round(self.growth_curve.carrying_capacity, 2),
+                round(self.growth_curve.carrying_capacity_std, 4),
+                self.growth_curve.doubling_time.total_seconds() // 60,
+                self.growth_curve.doubling_time_std.total_seconds() // 60,
+                self.timepoint_first.timestamp.total_seconds() // 60,
+                round(self.timepoint_first.area, 2),
+                round(self.timepoint_first.diameter, 2),
+                self.timepoint_last.timestamp.total_seconds() // 60,
+                round(self.timepoint_last.area, 2),
+                round(self.timepoint_last.diameter, 2),
+            ]
+        )
 
     @property
     def center(self) -> Union[Tuple[float, float], Tuple[float, float, float]]:
@@ -97,7 +102,7 @@ class Colony(Identified, Named, GrowthCurve):
 
     @property
     def color_name(self) -> str:
-        return rgb_to_name(self.color, color_spec = "css3")
+        return rgb_to_name(self.color, color_spec="css3")
 
     @property
     def timepoints(self):
@@ -113,7 +118,9 @@ class Colony(Identified, Named, GrowthCurve):
         elif isinstance(val, Collection) and not isinstance(val, str):
             self.__timepoints = [timepoint for timepoint in val]
         else:
-            raise ValueError("Timepoints must be supplied as a Dict or other Collection")
+            raise ValueError(
+                "Timepoints must be supplied as a Dict or other Collection"
+            )
 
     @property
     def timepoint_first(self) -> Timepoint:
@@ -136,7 +143,9 @@ class Colony(Identified, Named, GrowthCurve):
 
         :returns: a dictionary of measurements at time intervals
         """
-        return {timepoint.timestamp: log2(timepoint.area) for timepoint in self.timepoints}
+        return {
+            timepoint.timestamp: log2(timepoint.area) for timepoint in self.timepoints
+        }
 
     def append_timepoint(self, timepoint: Timepoint):
         """
@@ -147,7 +156,9 @@ class Colony(Identified, Named, GrowthCurve):
         if timepoint not in self.timepoints:
             self.__timepoints.append(timepoint)
         else:
-            raise ValueError(f"This time point at {timepoint.timestamp}  already exists")
+            raise ValueError(
+                f"This time point at {timepoint.timestamp}  already exists"
+            )
 
     def get_timepoint(self, timestamp: timedelta) -> Timepoint:
         """
@@ -156,7 +167,14 @@ class Colony(Identified, Named, GrowthCurve):
         :param timestamp: the timedelta key for specific Timepoint in the Colony timepoints collection
         :returns: a Timepoint object from the Colony timepoints collection
         """
-        return next((timepoint for timepoint in self.timepoints if timepoint.timestamp == timestamp), None)
+        return next(
+            (
+                timepoint
+                for timepoint in self.timepoints
+                if timepoint.timestamp == timestamp
+            ),
+            None,
+        )
 
     def remove_timepoint(self, timestamp: timedelta):
         """
@@ -169,9 +187,7 @@ class Colony(Identified, Named, GrowthCurve):
 
 
 def timepoints_from_image(
-    image_segmented: ndarray,
-    timestamp: timedelta,
-    image: ndarray = None
+    image_segmented: ndarray, timestamp: timedelta, image: ndarray = None
 ) -> List[Colony.Timepoint]:
     """
     Create Timepoint objects from a segemented image
@@ -197,26 +213,28 @@ def timepoints_from_image(
         if image is not None:
             # Select an area of the colony slightly smaller than its full radius
             # This avoids the edge halo of the image which may contain background pixels
-            radius = (rp.equivalent_diameter / 2) - ((rp.equivalent_diameter / 2) * 0.10)
+            radius = (rp.equivalent_diameter / 2) - (
+                (rp.equivalent_diameter / 2) * 0.10
+            )
             image_circle = cut_image_circle(image[rp.slice], radius - 1)
             # Filter out fringe alpha values and empty pixels
             limit = 200 if image_circle.shape[2] > 3 else 0
             image_circle = image_circle[image_circle[:, :, -1] > limit]
             if image_circle.size > 0:
                 # Calculate the average colour values by column over the colony area and remove alpha channel (if present)
-                color_average = tuple(image_circle.mean(axis = 0)[:3])
+                color_average = tuple(image_circle.mean(axis=0)[:3])
 
         # Create a new time point object to store colony data
         timepoint_data = Colony.Timepoint(
-            timestamp = timestamp,
-            area = rp.area,
-            center = rp.centroid,
-            diameter = rp.equivalent_diameter,
-            perimeter = rp.perimeter,
-            color_average = color_average,
-            bbox = rp.bbox,
-            image = rp.image,
-            label = rp.label
+            timestamp=timestamp,
+            area=rp.area,
+            center=rp.centroid,
+            diameter=rp.equivalent_diameter,
+            perimeter=rp.perimeter,
+            color_average=color_average,
+            bbox=rp.bbox,
+            image=rp.image,
+            label=rp.label,
             # rp = rp
         )
 
@@ -224,11 +242,13 @@ def timepoints_from_image(
 
     return colonies
 
+
 # def ris_colonies_filtered(colonies: List[Colony], timestamp_diff_std: float = 10) -> List[Colony]:
 
 
-
-def colonies_filtered(colonies: List[Colony], timestamp_diff_std: float = 10) -> List[Colony]:
+def colonies_filtered(
+    colonies: List[Colony], timestamp_diff_std: float = 10
+) -> List[Colony]:
     """
     Filter colonies to return only valid colonies
 
@@ -251,35 +271,29 @@ def colonies_filtered(colonies: List[Colony], timestamp_diff_std: float = 10) ->
         """
         area = array([tp.area for tp in colony.timepoints])
 
-        return area.max() > 50 and \
-               diff(area).mean() > 1.4 and \
-               len(colony.timepoints) >= 3
+        return (
+            area.max() > 50 and diff(area).mean() > 1.4 and len(colony.timepoints) >= 3
+        )
 
     # Filter colonies to remove noise, background objects and merged colonies
-    colonies = list(filter(_filter_colony,colonies))
-            # Remove objects that do not have sufficient data points
-            # len(colony.timepoints) > config.COLONY_TIMEPOINTS_MIN and
+    colonies = list(filter(_filter_colony, colonies))
+    # Remove objects that do not have sufficient data points
+    # len(colony.timepoints) > config.COLONY_TIMEPOINTS_MIN and
 
-
-
-
-            
-            # No colonies should be visible at the start of the experiment
-            # colony.time_of_appearance.total_seconds() > 0 and
-            # Remove objects with large gaps in the data
-            # diff([t.timestamp.total_seconds() for t in colony.timepoints[1:]]).std() < timestamp_diff_std * 3 and
-            # Remove object that do not show growth, these are not colonies
-            # colony.timepoint_last.area > config.COLONY_GROWTH_FACTOR_MIN * colony.timepoint_first.area and
-            # Objects that appear with a large initial area are either merged colonies or noise
-            # colony.timepoint_first.area < config.COLONY_FIRST_AREA_MAX,
-
+    # No colonies should be visible at the start of the experiment
+    # colony.time_of_appearance.total_seconds() > 0 and
+    # Remove objects with large gaps in the data
+    # diff([t.timestamp.total_seconds() for t in colony.timepoints[1:]]).std() < timestamp_diff_std * 3 and
+    # Remove object that do not show growth, these are not colonies
+    # colony.timepoint_last.area > config.COLONY_GROWTH_FACTOR_MIN * colony.timepoint_first.area and
+    # Objects that appear with a large initial area are either merged colonies or noise
+    # colony.timepoint_first.area < config.COLONY_FIRST_AREA_MAX,
 
     return colonies
 
 
 def colonies_from_timepoints(
-    timepoints: List[Colony.Timepoint],
-    distance_tolerance: float = 1
+    timepoints: List[Colony.Timepoint], distance_tolerance: float = 1
 ) -> List[Colony]:
     """
     Create a dictionary of Colony objects from Timepoint data
@@ -295,14 +309,15 @@ def colonies_from_timepoints(
 
     # Group Timepoints by centre distances
     colony_centers = group_timepoints_by_center(
-        timepoints,
-        max_distance = distance_tolerance
+        timepoints, max_distance=distance_tolerance
     )
 
     # Create a colony object for each group of centres
-    for i, timepoint_objects in enumerate(colony_centers, start = 1):
+    for i, timepoint_objects in enumerate(colony_centers, start=1):
         # Create a Dict of timepoints with timestamp as the keys
-        timepoints_dict = {timepoint.timestamp: timepoint for timepoint in timepoint_objects}
+        timepoints_dict = {
+            timepoint.timestamp: timepoint for timepoint in timepoint_objects
+        }
         # Create the Colony object with the Timepoints
         colonies.append(Colony(i, timepoints_dict))
 
@@ -310,8 +325,7 @@ def colonies_from_timepoints(
 
 
 def group_timepoints_by_center(
-    timepoints: List[Colony.Timepoint],
-    max_distance: float = 1
+    timepoints: List[Colony.Timepoint], max_distance: float = 1
 ) -> List[List[Colony.Timepoint]]:
     """
     Split a list of Timepoint objects into sub groups
@@ -324,7 +338,7 @@ def group_timepoints_by_center(
     """
     try:
         from math import dist
-    except ImportError:    # pragma: no cover
+    except ImportError:  # pragma: no cover
         # math.dist is not available in Python <3.8
         from scipy.spatial.distance import euclidean as dist
 

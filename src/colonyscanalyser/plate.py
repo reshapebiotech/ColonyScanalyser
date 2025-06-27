@@ -15,6 +15,7 @@ class Plate(GrowthCurve, Identified, IdentifiedCollection, Named, Circle):
     """
     An object to hold information about an agar plate and a collection of Colony objects
     """
+
     def __init__(
         self,
         id: int,
@@ -22,7 +23,7 @@ class Plate(GrowthCurve, Identified, IdentifiedCollection, Named, Circle):
         edge_cut: float = 0,
         name: str = "",
         center: Union[Tuple[float, float], Tuple[float, float, float]] = None,
-        colonies: list = None
+        colonies: list = None,
     ):
         self.id = id
         self.diameter = diameter
@@ -40,25 +41,29 @@ class Plate(GrowthCurve, Identified, IdentifiedCollection, Named, Circle):
         self.name = name
 
     def __iter__(self):
-        appearance = [colony.time_of_appearance.total_seconds() // 60 for colony in self.items] or [0]
+        appearance = [
+            colony.time_of_appearance.total_seconds() // 60 for colony in self.items
+        ] or [0]
 
-        return iter([
-            self.id,
-            self.name,
-            self.center,
-            self.diameter,
-            self.edge_cut,
-            self.count,
-            median(appearance),
-            self.growth_curve.lag_time.total_seconds() // 60,
-            self.growth_curve.lag_time_std.total_seconds() // 60,
-            round(self.growth_curve.growth_rate * 60, 5),
-            round(self.growth_curve.growth_rate_std * 60, 7),
-            round(self.growth_curve.carrying_capacity, 2),
-            round(self.growth_curve.carrying_capacity_std, 4),
-            self.growth_curve.doubling_time.total_seconds() // 60,
-            self.growth_curve.doubling_time_std.total_seconds() // 60
-        ])
+        return iter(
+            [
+                self.id,
+                self.name,
+                self.center,
+                self.diameter,
+                self.edge_cut,
+                self.count,
+                median(appearance),
+                self.growth_curve.lag_time.total_seconds() // 60,
+                self.growth_curve.lag_time_std.total_seconds() // 60,
+                round(self.growth_curve.growth_rate * 60, 5),
+                round(self.growth_curve.growth_rate_std * 60, 7),
+                round(self.growth_curve.carrying_capacity, 2),
+                round(self.growth_curve.carrying_capacity_std, 4),
+                self.growth_curve.doubling_time.total_seconds() // 60,
+                self.growth_curve.doubling_time_std.total_seconds() // 60,
+            ]
+        )
 
     @property
     def center(self) -> Union[Tuple[float, float], Tuple[float, float, float]]:
@@ -118,17 +123,19 @@ class Plate(GrowthCurve, Identified, IdentifiedCollection, Named, Circle):
                 "First diameter (pixels)",
                 "Final detection (elapsed minutes)",
                 "Final area (pixels)",
-                "Final diameter (pixels)"
+                "Final diameter (pixels)",
             ]
 
         return self._collection_to_csv(
             save_path,
             file_safe_name([f"plate{str(self.id)}", self.name, "colonies"]),
             self.items,
-            headers
+            headers,
         )
 
-    def colonies_timepoints_to_csv(self, save_path: Path, headers: List[str] = None) -> Path:
+    def colonies_timepoints_to_csv(
+        self, save_path: Path, headers: List[str] = None
+    ) -> Path:
         """
         Output the data from the timepoints in the colonies collection to a CSV file
 
@@ -144,7 +151,7 @@ class Plate(GrowthCurve, Identified, IdentifiedCollection, Named, Circle):
                 "Center (row, column)",
                 "Diameter (pixels)",
                 "Perimeter (pixels)",
-                "Color average (R,G,B)"
+                "Color average (R,G,B)",
             ]
 
         # Unpack timepoint properties to a flat list
@@ -157,7 +164,7 @@ class Plate(GrowthCurve, Identified, IdentifiedCollection, Named, Circle):
             save_path,
             file_safe_name([f"plate{str(self.id)}", self.name, "colony", "timepoints"]),
             colony_timepoints,
-            headers
+            headers,
         )
 
     def colonies_rename_sequential(self, start: int = 1) -> int:
@@ -167,13 +174,15 @@ class Plate(GrowthCurve, Identified, IdentifiedCollection, Named, Circle):
         :param start: the new initial ID number
         :returns: the final ID number of the renamed sequence
         """
-        for i, colony in enumerate(self.items, start = start):
+        for i, colony in enumerate(self.items, start=start):
             colony.id = i
 
         return i
 
     @staticmethod
-    def _collection_to_csv(save_path: Path, file_name: str, data: Collection, headers: List[str] = None) -> Path:
+    def _collection_to_csv(
+        save_path: Path, file_name: str, data: Collection, headers: List[str] = None
+    ) -> Path:
         """
         Output the data from the timepoints in the colonies collection to a CSV file
 
@@ -187,13 +196,11 @@ class Plate(GrowthCurve, Identified, IdentifiedCollection, Named, Circle):
         if not isinstance(save_path, Path):
             save_path = Path(save_path)
         if not save_path.exists() or str(PurePath(save_path)) == ".":
-            raise FileNotFoundError(f"The path '{str(save_path)}' could not be found. Please specify a different save path")
+            raise FileNotFoundError(
+                f"The path '{str(save_path)}' could not be found. Please specify a different save path"
+            )
 
-        return save_to_csv(
-            data,
-            headers,
-            save_path.joinpath(file_name)
-        )
+        return save_to_csv(data, headers, save_path.joinpath(file_name))
 
     def slice_plate_image(self, image: ndarray, background_color: Tuple = 0) -> ndarray:
         """
@@ -207,19 +214,18 @@ class Plate(GrowthCurve, Identified, IdentifiedCollection, Named, Circle):
         from .imaging import cut_image_circle
 
         return cut_image_circle(
-                image,
-                center = self.center,
-                radius = self.radius - self.edge_cut,
-                background_color = background_color
-            )
-
-
+            image,
+            center=self.center,
+            radius=self.radius - self.edge_cut,
+            background_color=background_color,
+        )
 
 
 class PlateCollection(IdentifiedCollection):
     """
     Holds a collection of Plates
     """
+
     def __init__(self, plates: Collection = None, shape: Tuple[int, int] = None):
         super(PlateCollection, self).__init__(plates)
         if shape is None:
@@ -228,7 +234,9 @@ class PlateCollection(IdentifiedCollection):
         self.shape = shape
 
     @property
-    def centers(self) -> Union[List[Tuple[float, float]], List[Tuple[float, float, float]]]:
+    def centers(
+        self,
+    ) -> Union[List[Tuple[float, float]], List[Tuple[float, float, float]]]:
         return [plate.center for plate in self.items]
 
     @property
@@ -238,7 +246,9 @@ class PlateCollection(IdentifiedCollection):
     @shape.setter
     def shape(self, val: Tuple[int, int]):
         if not PlateCollection._is_valid_shape(val):
-            raise ValueError(f"{val} is not a valid shape. All values must be non-negative integers")
+            raise ValueError(
+                f"{val} is not a valid shape. All values must be non-negative integers"
+            )
 
         self._shape = val
 
@@ -249,7 +259,7 @@ class PlateCollection(IdentifiedCollection):
         edge_cut: float = 0,
         name: str = "",
         center: Union[Tuple[float, float], Tuple[float, float, float]] = None,
-        colonies: list = None
+        colonies: list = None,
     ) -> Plate:
         """
         Create a new Plate and append it to the collection
@@ -261,12 +271,12 @@ class PlateCollection(IdentifiedCollection):
         """
 
         plate = Plate(
-            id = id,
-            diameter = diameter,
-            edge_cut = edge_cut,
-            name = name,
-            center = center,
-            colonies = colonies
+            id=id,
+            diameter=diameter,
+            edge_cut=edge_cut,
+            name=name,
+            center=center,
+            colonies=colonies,
         )
 
         self.append(plate)
@@ -274,7 +284,9 @@ class PlateCollection(IdentifiedCollection):
         return plate
 
     @classmethod
-    def from_image(cls, shape: Tuple[int, int], image: ndarray, diameter: float, **kwargs) -> PlateCollection:
+    def from_image(
+        cls, shape: Tuple[int, int], image: ndarray, diameter: float, **kwargs
+    ) -> PlateCollection:
         """
         Create a new instance of PlateCollection from an image
 
@@ -282,8 +294,8 @@ class PlateCollection(IdentifiedCollection):
         :param image: an image containing a set of plates, as a numpy array
         :returns: a new instance of PlateCollection
         """
-        plates = cls(shape = shape)
-        plates.plates_from_image(image = image, diameter = diameter, **kwargs)
+        plates = cls(shape=shape)
+        plates.plates_from_image(image=image, diameter=diameter, **kwargs)
 
         return plates
 
@@ -293,7 +305,7 @@ class PlateCollection(IdentifiedCollection):
         diameter: float,
         search_radius: float = 50,
         edge_cut: float = 0,
-        labels: Dict[int, str] = dict()
+        labels: Dict[int, str] = dict(),
     ) -> List[Plate]:
         """
         Create a collection of Plate instances from an image
@@ -308,29 +320,33 @@ class PlateCollection(IdentifiedCollection):
         from .imaging import get_image_circles
 
         if not self.shape:
-            raise ValueError("The PlateCollection shape property is required, but has not been set")
+            raise ValueError(
+                "The PlateCollection shape property is required, but has not been set"
+            )
 
         plate_coordinates = get_image_circles(
             image,
             int(diameter / 2),
-            circle_count = PlateCollection.coordinate_to_index(self.shape),
-            search_radius = search_radius
+            circle_count=PlateCollection.coordinate_to_index(self.shape),
+            search_radius=search_radius,
         )
 
         plates = list()
-        for plate_id, coord in enumerate(plate_coordinates, start = 1):
+        for plate_id, coord in enumerate(plate_coordinates, start=1):
             center, radius = coord
             name = ""
             if plate_id in labels:
                 name = labels[plate_id]
 
-            plates.append(self.add(
-                id = plate_id,
-                diameter = radius * 2,
-                edge_cut = edge_cut,
-                name = name,
-                center = center
-            ))
+            plates.append(
+                self.add(
+                    id=plate_id,
+                    diameter=radius * 2,
+                    edge_cut=edge_cut,
+                    name=name,
+                    center=center,
+                )
+            )
 
         return plates
 
@@ -358,17 +374,16 @@ class PlateCollection(IdentifiedCollection):
                 "Carrying capacity (log2[Area])",
                 "Carrying capacity standard deviation (log2[Area])",
                 "Doubling time (minutes)",
-                "Doubling time standard deviation (minutes)"
+                "Doubling time standard deviation (minutes)",
             ]
 
         return Plate._collection_to_csv(
-            save_path,
-            file_safe_name(["plates_summary"]),
-            self.items,
-            headers
+            save_path, file_safe_name(["plates_summary"]), self.items, headers
         )
 
-    def slice_plate_images(self, image: ndarray, background_color: Tuple = 0) -> Dict[int, ndarray]:
+    def slice_plate_images(
+        self, image: ndarray, background_color: Tuple = 0
+    ) -> Dict[int, ndarray]:
         """
         Split an image into individual plate subimages and delete background
 
@@ -415,7 +430,9 @@ class PlateCollection(IdentifiedCollection):
         :returns: row and column coordinate tuple
         """
         if index < 1 or not PlateCollection._is_valid_shape(shape):
-            raise ValueError("The supplied index or shape is not valid. All values must be non-negative integers")
+            raise ValueError(
+                "The supplied index or shape is not valid. All values must be non-negative integers"
+            )
 
         shape_row, shape_col = shape
 
@@ -429,7 +446,6 @@ class PlateCollection(IdentifiedCollection):
 
     @staticmethod
     def _is_valid_shape(shape: Tuple[int, int]) -> bool:
-        return (
-            all(shape) and
-            not any([(not isinstance(val, int) or val < 1) for val in shape])
+        return all(shape) and not any(
+            [(not isinstance(val, int) or val < 1) for val in shape]
         )
