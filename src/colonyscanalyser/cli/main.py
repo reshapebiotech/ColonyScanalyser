@@ -6,6 +6,8 @@ ColonyScanalyser tool, handling argument parsing and delegating to the
 appropriate analysis functions.
 """
 
+import sys
+from collections import defaultdict
 from functools import partial
 from multiprocessing import Pool, cpu_count
 from pathlib import Path
@@ -138,7 +140,45 @@ def main():
 
                     image_files.update(results)
 
-        # TODO: Add plate detection logic here
+        # Process images to Timepoint data objects
+        plate_images_mask = None
+        plate_timepoints = defaultdict(list)
+
+        if not SILENT:
+            print("Preprocessing images to locate plates")
+
+        # Load the first image to get plate coordinates and mask
+        with image_files.items[0] as image_file:
+            # Only find centers using first image. Assume plates do not move
+            if plates is None:
+                if VERBOSE:
+                    print(f"Locating plate centres in image: {image_file.file_path}")
+
+                # Create new Plate instances to store the information
+                plates = PlateCollection.from_image(
+                    shape=PLATE_LATTICE,
+                    image=image_file.image_gray,
+                    diameter=PLATE_SIZE,
+                    search_radius=PLATE_SIZE // 20,
+                    edge_cut=PLATE_EDGE_CUT,
+                    labels=PLATE_LABELS,
+                )
+
+                if not plates.count > 0:
+                    if not SILENT:
+                        print(
+                            f"Unable to locate plates in image: {image_file.file_path}"
+                        )
+                        print("Processing unable to continue")
+                    sys.exit()
+
+                if VERBOSE:
+                    for plate in plates.items:
+                        print(f"Plate {plate.id} center: {plate.center}")
+
+            # Use the first plate image as a noise mask
+            plate_noise_masks = plates.slice_plate_images(image_file.image_gray)
+
         # TODO: Add colony segmentation logic here
         # TODO: Add colony tracking logic here
 
