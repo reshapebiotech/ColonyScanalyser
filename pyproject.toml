@@ -36,3 +36,8 @@ extend-exclude = ["build", "dist", ".eggs", "*.egg-info"]
 
 [tool.ruff.lint]
 ignore = []
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.1",
+]
