@@ -5,6 +5,7 @@ This module provides functions for drawing colony masks, IDs, and other
 visualizations on images without necessarily saving to disk.
 """
 
+from datetime import timedelta
 from typing import List
 
 import matplotlib.pyplot as plt
@@ -13,16 +14,16 @@ from matplotlib.patches import Circle
 from numpy import ndarray
 from skimage.color import label2rgb
 
-from ..core.colony import Colony
-from ..core.plate import Plate
+from ..models.colony import Colony
+from ..models.plate import Plate
 
 
 def draw_colony_masks(
     image: ndarray,
     colonies: List[Colony],
-    timestamp: "timedelta",
+    timestamp: timedelta,
     alpha: float = 0.3,
-    colormap: str = "tab20",
+    colormap=None,
 ) -> ndarray:
     """
     Draw colony masks overlaid on an image.
@@ -31,7 +32,7 @@ def draw_colony_masks(
     :param colonies: list of Colony objects to draw
     :param timestamp: the timestamp to find the appropriate timepoint
     :param alpha: transparency of the overlay (0.0 to 1.0)
-    :param colormap: matplotlib colormap for colony colors
+    :param colormap: colors for colony overlay (None for automatic colors)
     :returns: image with colony masks overlaid
     """
     if len(colonies) == 0:
@@ -67,7 +68,7 @@ def draw_colony_masks(
 def draw_colony_ids(
     image: ndarray,
     colonies: List[Colony],
-    timestamp: "timedelta",
+    timestamp: timedelta,
     font_size: int = 12,
     text_color: str = "white",
     bg_color: str = "black",
@@ -152,7 +153,7 @@ def draw_colony_ids(
 def draw_colony_outlines(
     image: ndarray,
     colonies: List[Colony],
-    timestamp: "timedelta",
+    timestamp: timedelta,
     outline_color: str = "red",
     line_width: float = 1.0,
     show_ids: bool = False,
@@ -333,7 +334,7 @@ def draw_plate_overlay(
 def create_colony_visualization(
     image: ndarray,
     plate: Plate,
-    timestamp: "timedelta",
+    timestamp: timedelta,
     show_masks: bool = True,
     show_ids: bool = True,
     show_outlines: bool = False,
@@ -358,17 +359,19 @@ def create_colony_visualization(
     if show_plate:
         result = draw_plate_overlay(result, plate)
 
-    if len(plate.items) > 0:
+    if len(plate.colonies) > 0:
         if show_masks:
-            result = draw_colony_masks(result, plate.items, timestamp, alpha=mask_alpha)
+            result = draw_colony_masks(
+                result, plate.colonies, timestamp, alpha=mask_alpha
+            )
 
         if show_outlines:
             result = draw_colony_outlines(
-                result, plate.items, timestamp, show_ids=False
+                result, plate.colonies, timestamp, show_ids=False
             )
 
         if show_ids:
-            result = draw_colony_ids(result, plate.items, timestamp)
+            result = draw_colony_ids(result, plate.colonies, timestamp)
 
     return result
 
@@ -505,7 +508,7 @@ def save_colony_visualizations(
 def draw_colony_ids_on_full_image(
     image: ndarray,
     plate: Plate,
-    timestamp: "timedelta",
+    timestamp: timedelta,
 ) -> ndarray:
     """
     Draw colony IDs on full image, adjusting coordinates for plate position.
@@ -586,7 +589,7 @@ def draw_colony_ids_on_full_image(
 def draw_colony_outlines_on_full_image(
     image: ndarray,
     plate: Plate,
-    timestamp: "timedelta",
+    timestamp: timedelta,
     show_ids: bool = True,
 ) -> ndarray:
     """

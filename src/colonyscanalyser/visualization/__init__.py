@@ -14,6 +14,12 @@ from .drawing import (
     draw_plate_overlay,
     save_colony_visualizations,
 )
+from .export import (
+    create_visualization_filename,
+    save_image,
+    save_plot,
+    save_visualization_series,
+)
 from .plots import (
     plot_appearance_frequency,
     plot_colony_map,
@@ -22,6 +28,12 @@ from .plots import (
     plot_plate_images_animation,
 )
 from .plotting import rc_to_xy
+from .utils import (
+    axis_minutes_to_hours,
+    label_bars,
+    normalize_image,
+    setup_matplotlib_defaults,
+)
 
 __all__ = [
     # Main plotting functions
@@ -37,6 +49,16 @@ __all__ = [
     "draw_colony_outlines",
     "draw_plate_overlay",
     "save_colony_visualizations",
+    # Export utilities
+    "create_visualization_filename",
+    "save_image",
+    "save_plot",
+    "save_visualization_series",
     # Plotting utilities
     "rc_to_xy",
+    # Visualization utilities
+    "axis_minutes_to_hours",
+    "label_bars",
+    "normalize_image",
+    "setup_matplotlib_defaults",
 ]

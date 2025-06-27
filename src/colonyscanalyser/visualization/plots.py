@@ -7,9 +7,9 @@ import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 from numpy import ndarray
 
-from ..core.image_file import ImageFile, ImageFileCollection
-from ..core.plate import Plate, PlateCollection
-from .plotting import rc_to_xy
+from ..models.image import ImageCollection, ImageFile
+from ..models.plate import Plate, PlateCollection
+from .utils import rc_to_xy
 
 
 def plot_colony_map(plate_image: ndarray, plates: List[Plate], save_path: Path) -> Path:
@@ -90,7 +90,7 @@ def plot_colony_map(plate_image: ndarray, plates: List[Plate], save_path: Path) 
         ax.add_artist(plate_circle_measured)
 
         # Mark colony centres and ID numbers
-        for colony in plate.items:
+        for colony in plate.colonies:
             x, y = rc_to_xy(colony.center)
             x = offset_x + x
             y = offset_y + y
@@ -195,7 +195,7 @@ def plot_plate_segmented(
 
 def plot_plate_images_animation(
     plates: PlateCollection,
-    image_files: ImageFileCollection,
+    image_files: ImageCollection,
     save_path: Path,
     fps: int = 10,
     image_name: str = "plate_image_animation",
@@ -222,14 +222,14 @@ def plot_plate_images_animation(
     from .file_access import create_subdirectory, file_safe_name
 
     # Divide up image files between processes and assemble results
-    chunk_size = int(image_files.count // pool_max)
+    chunk_size = int(len(image_files) // pool_max)
     func = partial(_image_file_to_plate_images, plate_collection=plates, **kwargs)
     with Pool(processes=pool_max) as pool:
-        images = pool.map(func, image_files.items, chunksize=chunk_size)
+        images = pool.map(func, image_files.images, chunksize=chunk_size)
 
     try:
         save_paths = list()
-        for plate in plates.items:
+        for plate in plates:
             # Create directory for each plate if needed
             image_path = create_subdirectory(
                 save_path, file_safe_name([f"plate{plate.id}", plate.name])
@@ -327,7 +327,7 @@ def growth_curve(
     if line_color is None:
         line_color = scatter_color
 
-    for colony in plate.items:
+    for colony in plate.colonies:
         ax.scatter(
             # Matplotlib does not yet support timedeltas so we have to convert manually to float
             [
@@ -479,7 +479,7 @@ def time_of_appearance_frequency(
     timestamps = dict.fromkeys(
         [timestamp.total_seconds() / 3600 for timestamp in timestamps], 0
     )
-    appearance_counts = Counter(colony.time_of_appearance for colony in plate.items)
+    appearance_counts = Counter(colony.time_of_appearance for colony in plate.colonies)
 
     # Normalise counts to frequency
     appearance_counts = {
