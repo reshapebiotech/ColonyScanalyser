@@ -1,3 +1,38 @@
 [build-system]
-# Minimum requirements for the build system to execute.
-requires = ["setuptools", "wheel"]  # PEP 508 specifications
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "colonyscanalyser"
+version = "0.6.2"
+description = "An image analysis tool for measuring microorganism colony growth"
+readme = "README.md"
+license = { text = "GPL-3.0" }
+authors = [{ name = "Erik White" }]
+requires-python = ">=3.13"
+dependencies = [
+    "numpy >= 1.18",
+    "matplotlib",
+    "scikit-image >= 0.25",
+    "imreg_dft",
+    "webcolors",
+]
+
+[project.scripts]
+colonyscanalyser = "colonyscanalyser.main:main"
+scanalyser = "colonyscanalyser.main:main"
+
+[project.optional-dependencies]
+dev = ["pytest", "ruff", "pyright"]
+test = ["pytest"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/colonyscanalyser"]
+
+# Ruff configuration
+[tool.ruff]
+line-length = 88
+extend-exclude = ["build", "dist", ".eggs", "*.egg-info"]
+
+[tool.ruff.lint]
+ignore = []

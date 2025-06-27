@@ -1,9 +1,13 @@
-from typing import Optional, Union, Tuple, List
+from typing import List, Optional, Tuple, Union
+
 from numpy import ndarray
-from skimage.transform._geometric import GeometricTransform, SimilarityTransform
 
 
-def mm_to_pixels(millimeters: float, dots_per_inch: float = 300, pixels_per_mm: Optional[float] = None) -> float:
+def mm_to_pixels(
+    millimeters: float,
+    dots_per_inch: float = 300,
+    pixels_per_mm: Optional[float] = None,
+) -> float:
     """
     Convert a measurement in millimetres to image pixels
 
@@ -12,7 +16,11 @@ def mm_to_pixels(millimeters: float, dots_per_inch: float = 300, pixels_per_mm: 
     :param pixels_per_mm: optional conversion factor, instead of DPI
     :returns: a value in pixels
     """
-    if millimeters <= 0 or dots_per_inch <= 0 or (pixels_per_mm is not None and pixels_per_mm <= 0):
+    if (
+        millimeters <= 0
+        or dots_per_inch <= 0
+        or (pixels_per_mm is not None and pixels_per_mm <= 0)
+    ):
         raise ValueError("All supplied arguments must be positive values")
 
     factor = dots_per_inch / 25.4
@@ -23,7 +31,10 @@ def mm_to_pixels(millimeters: float, dots_per_inch: float = 300, pixels_per_mm: 
     return int(millimeters * factor)
 
 
-def rgb_to_name(color_rgb: Union[Tuple[int, int, int], Tuple[float, float, float]], color_spec: str = "css3") -> str:
+def rgb_to_name(
+    color_rgb: Union[Tuple[int, int, int], Tuple[float, float, float]],
+    color_spec: str = "css3",
+) -> str:
     """
     Convert an RGB tuple to the closest named web colour
 
@@ -39,15 +50,19 @@ def rgb_to_name(color_rgb: Union[Tuple[int, int, int], Tuple[float, float, float
     color_spec = str.lower(color_spec)
     if color_spec == "html4":
         from webcolors import HTML4_HEX_TO_NAMES
+
         color_dict = HTML4_HEX_TO_NAMES
     elif color_spec == "css2":
         from webcolors import CSS2_HEX_TO_NAMES
+
         color_dict = CSS2_HEX_TO_NAMES
     elif color_spec == "css21":
         from webcolors import CSS21_HEX_TO_NAMES
+
         color_dict = CSS21_HEX_TO_NAMES
     else:
         from webcolors import CSS3_HEX_TO_NAMES
+
         color_dict = CSS3_HEX_TO_NAMES
 
     min_colours = {}
@@ -64,7 +79,7 @@ def rgb_to_name(color_rgb: Union[Tuple[int, int, int], Tuple[float, float, float
 def crop_image(
     image: ndarray,
     crop_shape: Union[Tuple[int, int], Tuple[int, int, int]],
-    center: Optional[Tuple[int, int]] = None
+    center: Optional[Tuple[int, int]] = None,
 ) -> ndarray:
     """
     Get a subsection of an image
@@ -80,12 +95,18 @@ def crop_image(
 
     img = image.copy()
 
-    if any(x < 0 for x in crop_shape) or any(not isinstance(x, int) for x in crop_shape) or len(image.shape) < len(crop_shape):
+    if (
+        any(x < 0 for x in crop_shape)
+        or any(not isinstance(x, int) for x in crop_shape)
+        or len(image.shape) < len(crop_shape)
+    ):
         raise ValueError(
             f"The crop shape ({crop_shape}) must be positive integers and the same dimensions as the image to crop"
         )
     if crop_shape > img.shape:
-        raise ValueError(f"The crop shape ({crop_shape}) cannot be larger than the image ({image.shape}) to crop")
+        raise ValueError(
+            f"The crop shape ({crop_shape}) cannot be larger than the image ({image.shape}) to crop"
+        )
 
     if center is None:
         # Use the center of the image
@@ -109,7 +130,7 @@ def cut_image_circle(
     center: Optional[Tuple[float, float]] = None,
     radius: Optional[float] = None,
     inverse: bool = False,
-    background_color = 0
+    background_color=0,
 ) -> ndarray:
     """
     Get the circular area of an image
@@ -123,7 +144,7 @@ def cut_image_circle(
     :param background_color: the color to replace the empty parts of the image
     :returns: an image as a numpy array
     """
-    from numpy import sqrt, arange, vstack
+    from numpy import arange, sqrt, vstack
 
     img = image.copy()
 
@@ -132,7 +153,9 @@ def cut_image_circle(
         radius = image.shape[0] // 2
     else:
         if any(radius * 2 > x for x in img.shape[:2]):
-            raise ValueError("The circle radius cannot be larger than the supplied image")
+            raise ValueError(
+                "The circle radius cannot be larger than the supplied image"
+            )
         # Crop the image around the center point
         crop_area = (int(radius) * 2) + 1
         img = crop_image(img, (crop_area, crop_area), center)
@@ -142,7 +165,7 @@ def cut_image_circle(
     # Calculate distances from center
     dist_x = vstack([(arange(img.shape[1]) - cx)] * (img.shape[0]))
     dist_y = vstack([(arange(img.shape[0]) - cy)] * (img.shape[1])).T
-    dist = sqrt(dist_x ** 2 + dist_y ** 2)
+    dist = sqrt(dist_x**2 + dist_y**2)
 
     if inverse:
         # Remove image information in area inside boundary
@@ -158,7 +181,7 @@ def get_image_circles(
     image: ndarray,
     circle_radius: float,
     circle_count: int = -1,
-    search_radius: float = 0
+    search_radius: float = 0,
 ) -> List[Tuple[Tuple[float, float], float]]:
     """
     Get circular parts of an image matching the size criteria
@@ -170,9 +193,9 @@ def get_image_circles(
     :returns: a list of center co-ordinate tuples and radii
     """
     from numpy import inf
-    from skimage.transform import hough_circle, hough_circle_peaks
     from skimage.feature import canny
     from skimage.filters import threshold_otsu
+    from skimage.transform import hough_circle, hough_circle_peaks
 
     if circle_count == -1:
         circle_count = inf
@@ -183,7 +206,7 @@ def get_image_circles(
 
     # Find edges in the image
     threshold = threshold_otsu(img)
-    edges = canny(img < threshold, sigma = 3)
+    edges = canny(img < threshold, sigma=3)
 
     # Check 2 * search_radius pixels around the target radius, in steps of 10
     radii = range(circle_radius - search_radius, circle_radius + search_radius, 10)
@@ -193,9 +216,9 @@ def get_image_circles(
     _, cx, cy, radii = hough_circle_peaks(
         hough_circles,
         radii,
-        min_xdistance = circle_radius,
-        min_ydistance = circle_radius,
-        total_num_peaks = circle_count
+        min_xdistance=circle_radius,
+        min_ydistance=circle_radius,
+        total_num_peaks=circle_count,
     )
 
     # Create a Dict with y values as keys and row numbers as values
@@ -208,8 +231,8 @@ def get_image_circles(
         row_groups[x] = row_count
 
     # Group and order coordinates in rows from top left
-    coordinates = sorted(zip(cy, cx), key = lambda k: (row_groups[k[0]], 0, k[1]))
-    radii = [max(radii, key = radii.tolist().count) for x in radii]
+    coordinates = sorted(zip(cy, cx), key=lambda k: (row_groups[k[0]], 0, k[1]))
+    radii = [max(radii, key=radii.tolist().count) for x in radii]
 
     return [*zip(coordinates, radii)]
 
@@ -221,7 +244,7 @@ def image_as_rgb(image: ndarray) -> ndarray:
     :param image: an image as a numpy array
     :returns: the image with RGB colour
     """
-    from skimage.color import rgba2rgb, gray2rgb
+    from skimage.color import gray2rgb, rgba2rgb
 
     # If the image has no colour channels, it must be greyscale
     if len(image.shape) < 3 or image.shape[-1] == 1:
@@ -234,7 +257,9 @@ def image_as_rgb(image: ndarray) -> ndarray:
     return image
 
 
-def remove_background_mask(image: ndarray, smoothing: float = 1, sigmoid_cutoff: float = 0.4, **filter_args) -> ndarray:
+def remove_background_mask(
+    image: ndarray, smoothing: float = 1, sigmoid_cutoff: float = 0.4, **filter_args
+) -> ndarray:
     """
     Separate the image foreground from the background
 
@@ -253,7 +278,7 @@ def remove_background_mask(image: ndarray, smoothing: float = 1, sigmoid_cutoff:
     if image.size == 0:
         raise ValueError("The supplied image cannot be empty")
 
-    image = image.astype("float64", copy = True)
+    image = image.astype("float64", copy=True)
 
     # Do not process the image if it is empty
     if not image.any():
@@ -263,7 +288,7 @@ def remove_background_mask(image: ndarray, smoothing: float = 1, sigmoid_cutoff:
     image = gaussian(image, smoothing, **filter_args)
 
     # Heighten contrast
-    image = adjust_sigmoid(image, cutoff = sigmoid_cutoff, gain = 10)
+    image = adjust_sigmoid(image, cutoff=sigmoid_cutoff, gain=10)
 
     # Find background threshold and return only foreground
-    return image < threshold_triangle(image, nbins = 10)
+    return image < threshold_triangle(image, nbins=10)

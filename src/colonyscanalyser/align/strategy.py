@@ -1,8 +1,10 @@
-from typing import Union, Tuple, Collection
 from enum import Enum, auto
-from skimage.transform._geometric import GeometricTransform
-from .transform import AlignTransform
+from typing import Collection, Tuple, Union
+
+from skimage.transform._geometric import _GeometricTransform as GeometricTransform
+
 from ..image_file import ImageFile
+from .transform import AlignTransform
 
 
 class AlignStrategy(Enum):
@@ -19,9 +21,10 @@ class AlignStrategy(Enum):
     none:
         Do not calculate alignment for any images
     """
+
     quick = auto()
-    verify = auto(),
-    complete = auto(),
+    verify = (auto(),)
+    complete = (auto(),)
     none = auto()
 
 
@@ -30,7 +33,7 @@ def calculate_transformation_strategy(
     strategy: AlignStrategy,
     transform_type: str = "euclidean",
     tolerance: float = 0.1,
-    **kwargs
+    **kwargs,
 ) -> Union[Union[AlignTransform, GeometricTransform], Collection[ImageFile]]:
     """
     Determine the AlignTransform and slice that it should be applied to in a
@@ -46,6 +49,7 @@ def calculate_transformation_strategy(
     """
     from numpy import identity
     from skimage.transform._geometric import TRANSFORMS
+
     from .transform import FastFourierAlignTransform, transform_parameters_equal
 
     # Calculate alignment for all images by default (AlignStrategy.complete)
@@ -66,26 +70,32 @@ def calculate_transformation_strategy(
 
     # Check the final image in the sequence in case alignment is not required
     image_file_final = images[-1]
-    image_file_final.alignment_transform = align_model.align_transform(image_file_final.image)
+    image_file_final.alignment_transform = align_model.align_transform(
+        image_file_final.image
+    )
 
     # If the first and last images are already aligned then there is nothing to do,
     # unless the strategy requires all images to be checked for alignment
     if not strategy == AlignStrategy.complete:
         # 3x3 identity matrix, equivalent to a stationary transformation matrix
-        if transform_parameters_equal(image_file_final.alignment_transform, identity(3), tolerance):
+        if transform_parameters_equal(
+            image_file_final.alignment_transform, identity(3), tolerance
+        ):
             return align_model, list()
 
     if strategy == AlignStrategy.quick or AlignStrategy.verify:
         # Try to find the smallest number of images to align
-        image_file_shift, shift_index = _locate_alignment_shift(images, align_model, tolerance = tolerance, **kwargs)
+        image_file_shift, shift_index = _locate_alignment_shift(
+            images, align_model, tolerance=tolerance, **kwargs
+        )
         # If the transformation at the start of the shift is very similar to the end,
         # apply the same transformation throughout. Otherwise use AlignStrategy.verify
         transforms_similar = transform_parameters_equal(
             image_file_shift.alignment_transform,
             image_file_final.alignment_transform,
-            tolerance
+            tolerance,
         )
-        if (strategy == AlignStrategy.quick and transforms_similar):
+        if strategy == AlignStrategy.quick and transforms_similar:
             align_model = image_file_final.alignment_transform
 
     return align_model, images[shift_index:]
@@ -95,7 +105,7 @@ def apply_align_transform(
     image_file: ImageFile,
     align_model: Union[AlignTransform, GeometricTransform],
     replace_existing: bool = False,
-    **kwargs
+    **kwargs,
 ) -> ImageFile:
     """
     Calculate a GeometricTransform for the ImageFile using the supplied AlignTransform,
@@ -120,7 +130,7 @@ def _locate_alignment_shift(
     images: Collection[ImageFile],
     align_model: AlignTransform,
     tolerance: float = 0.1,
-    **kwargs
+    **kwargs,
 ) -> Tuple[ImageFile, int]:
     """
     Locate the first image in a collection where the image alignment shifted. The first image
@@ -135,6 +145,7 @@ def _locate_alignment_shift(
     :returns: the ImageFile where alignment first shifted, and its index in the collection
     """
     from numpy import identity
+
     from .transform import transform_parameters_equal
 
     bottom = 0
@@ -145,10 +156,14 @@ def _locate_alignment_shift(
 
         # Verify the image alignment
         image_file = images[mid]
-        image_file.alignment_transform = align_model.align_transform(image_file.image, **kwargs)
+        image_file.alignment_transform = align_model.align_transform(
+            image_file.image, **kwargs
+        )
 
         # 3x3 identity matrix, equivalent to a stationary transformation matrix
-        if transform_parameters_equal(image_file.alignment_transform, identity(3), tolerance):
+        if transform_parameters_equal(
+            image_file.alignment_transform, identity(3), tolerance
+        ):
             image_file.align_transform = None
             bottom = mid
         else:

@@ -36,17 +36,35 @@ scanalyser --help
 A full set of documentation is available at https://erik-white.github.io/ColonyScanalyser/
 
 ### Prerequisites
-ColonyScanalyser requires Python version 3.7 or greater, and the Pip package manager. Pip is included with Python version 3.4 and up.
-
-The remaining Python package dependencies are automatically handled by Pip when installing the Colonyscanalyser package.
+ColonyScanalyser requires Python version 3.7 or greater. For development, we recommend using [uv](https://docs.astral.sh/uv/) for fast dependency management.
 
 <img align="right" src="docs/images/plate_map_small.png">
 
-Optionally use a virtual environment, such as [Pipenv](https://github.com/pypa/pipenv), or a [containerised instance of the package](https://hub.docker.com/r/erikwhite/colonyscanalyser).
+#### For Users
+Install via pip:
+```bash
+pip install colonyscanalyser
+```
 
-For testing:
-* [Pytest](https://pytest.org/)
-* [Pytest-cov](https://github.com/pytest-dev/pytest-cov/)
+Or use a [containerised instance of the package](https://hub.docker.com/r/erikwhite/colonyscanalyser).
+
+#### For Development
+1. Install [uv](https://docs.astral.sh/uv/getting-started/installation/)
+2. Clone the repository
+3. Install dependencies and set up the development environment:
+```bash
+uv sync --extra dev
+```
+
+Run tests:
+```bash
+uv run pytest
+```
+
+Run the application:
+```bash
+uv run colonyscanalyser /path/to/images
+```
 
 ### Installing
 

@@ -1,5 +1,7 @@
-from typing import Union, Tuple, List
-from matplotlib.axes import Axes, BarContainer
+from typing import List, Tuple, Union
+
+from matplotlib.axes import Axes
+from matplotlib.container import BarContainer
 
 
 def rc_to_xy(coordinate: Tuple[int, int]) -> Tuple[int, int]:
@@ -65,7 +67,7 @@ def _label_bar(ax: Axes, bars: BarContainer, text_format: str, **kwargs):
             color = "black"
             text_y = bar.get_height() + outside_distance
 
-        ax.text(text_x, text_y, text, ha = "center", va = "bottom", color = color, **kwargs)
+        ax.text(text_x, text_y, text, ha="center", va="bottom", color=color, **kwargs)
 
 
 def _label_bar_horizontal(ax: Axes, bars: BarContainer, text_format: str, **kwargs):
@@ -87,4 +89,4 @@ def _label_bar_horizontal(ax: Axes, bars: BarContainer, text_format: str, **kwar
         text_x = bar.get_width() + distance
         text_y = bar.get_y() + bar.get_height() / 2
 
-        ax.text(text_x, text_y, text, va='center', **kwargs)
+        ax.text(text_x, text_y, text, va="center", **kwargs)

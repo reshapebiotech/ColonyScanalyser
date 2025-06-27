@@ -1,12 +1,16 @@
 from __future__ import annotations
-from typing import Optional, List
-from pathlib import Path
+
 from datetime import datetime, timedelta
+from pathlib import Path
 from re import search
-from numpy import ndarray, uint8
+from typing import List, Optional
+
+from numpy import ndarray
+from skimage.transform._geometric import _GeometricTransform as GeometricTransform
+
 from colonyscanalyser.plate import Plate
-from skimage.transform._geometric import GeometricTransform
-from .base import IdentifiedCollection, Unique, TimeStampElapsed
+
+from .base import IdentifiedCollection, TimeStampElapsed, Unique
 from .file_access import file_exists
 
 
@@ -14,18 +18,21 @@ class ImageFile(Unique, TimeStampElapsed):
     """
     Holds information about, and provides access to, a timestamped image file
     """
+
     def __init__(
         self,
         file_path: Path,
         timestamp: datetime = None,
         timestamp_initial: datetime = None,
         cache_image: bool = False,
-        align_image: bool = True
+        align_image: bool = True,
     ):
         super(ImageFile, self).__init__()
 
         self.file_path = file_path
-        self.timestamp = timestamp or self.timestamp_from_string(str(self.file_path.name))
+        self.timestamp = timestamp or self.timestamp_from_string(
+            str(self.file_path.name)
+        )
         self.timestamp_initial = timestamp_initial or self.timestamp
         self.cache_image = cache_image
         self.align_image = align_image
@@ -79,13 +86,17 @@ class ImageFile(Unique, TimeStampElapsed):
         else:
             image = ImageFile._load_image(self.file_path)
         if self.align_image and self.alignment_transform is not None:
-            scale = self.alignment_transform.scale if hasattr(self.alignment_transform, "scale") else 1
+            scale = (
+                self.alignment_transform.scale
+                if hasattr(self.alignment_transform, "scale")
+                else 1
+            )
             image = transform_img(
                 image,
                 scale,
                 self.alignment_transform.rotation,
                 self.alignment_transform.translation,
-                bgval = 0
+                bgval=0,
             )
 
         return image
@@ -117,8 +128,7 @@ class ImageFile(Unique, TimeStampElapsed):
     @staticmethod
     def timestamp_from_string(
         search_string: str,
-        pattern: str =
-        "(?P<year>\\d{4}).?(?P<month>[0-1][0-9]).?(?P<day>[0-3][0-9]).?(?P<hour>[0-2][0-9]).?(?P<minute>[0-5][0-9])"
+        pattern: str = "(?P<year>\\d{4}).?(?P<month>[0-1][0-9]).?(?P<day>[0-3][0-9]).?(?P<hour>[0-2][0-9]).?(?P<minute>[0-5][0-9])",
     ) -> Optional[datetime]:
         """
         Attempts to read a datetime value from a string
@@ -136,23 +146,30 @@ class ImageFile(Unique, TimeStampElapsed):
         result = search(pattern, search_string)
         if result:
             return datetime(
-                year = int(result.groupdict()["year"]),
-                month = int(result.groupdict()["month"]),
-                day = int(result.groupdict()["day"]),
-                hour = int(result.groupdict()["hour"]),
-                minute = int(result.groupdict()["minute"])
+                year=int(result.groupdict()["year"]),
+                month=int(result.groupdict()["month"]),
+                day=int(result.groupdict()["day"]),
+                hour=int(result.groupdict()["hour"]),
+                minute=int(result.groupdict()["minute"]),
             )
         else:
             return None
 
     @staticmethod
-    def _load_image(file_path: Path, as_gray: bool = False, plugin: str = None, **plugin_args) -> ndarray:
+    def _load_image(
+        file_path: Path, as_gray: bool = False, plugin: str = None, **plugin_args
+    ) -> ndarray:
         from skimage.io import imread
+
         from .imaging import image_as_rgb
 
         while True:
             try:
-                return image_as_rgb(imread(str(file_path), as_gray = as_gray, plugin = plugin, **plugin_args))
+                return image_as_rgb(
+                    imread(
+                        str(file_path), as_gray=as_gray, plugin=plugin, **plugin_args
+                    )
+                )
             except Exception:
                 if not plugin:
                     # Retry imread once with a different plugin if none has been set
@@ -160,7 +177,6 @@ class ImageFile(Unique, TimeStampElapsed):
                     plugin = "pil"
                 else:
                     raise
-    
 
     def draw_colonies_for_plate(self, plate: Plate):
         """
@@ -169,33 +185,49 @@ class ImageFile(Unique, TimeStampElapsed):
         :param plate: the plate to draw the colonies for
         """
         import numpy as np
-        from skimage.morphology import binary_erosion
         from skimage.color import label2rgb
+
         plate_slice = plate.slice_plate_image(self.image_gray).copy()
         labels = np.zeros(plate_slice.shape[:2])
         for colony in plate.items:
-            if tp := next((tp for tp in colony.timepoints if tp.timestamp == self.timestamp_elapsed), None):
+            if tp := next(
+                (
+                    tp
+                    for tp in colony.timepoints
+                    if tp.timestamp == self.timestamp_elapsed
+                ),
+                None,
+            ):
                 min_row, min_col, max_row, max_col = tp.bbox
-                img = tp.image * tp.label # get the label image
+                img = tp.image * tp.label  # get the label image
                 labels[min_row:max_row, min_col:max_col] += img
-        return label2rgb(labels,plate_slice, bg_label = 0)
+        return label2rgb(labels, plate_slice, bg_label=0)
 
 
 class ImageFileCollection(IdentifiedCollection):
     """
     Holds a collection of ImageFiles
     """
+
     @IdentifiedCollection.items.getter
     def items(self) -> List[ImageFile]:
-        return sorted(self._items.values(), key = lambda item: item.timestamp)
+        return sorted(self._items.values(), key=lambda item: item.timestamp)
 
     @property
     def file_paths(self) -> List[datetime]:
-        return [image_file.file_path for image_file in self.items if image_file.timestamp is not None]
+        return [
+            image_file.file_path
+            for image_file in self.items
+            if image_file.timestamp is not None
+        ]
 
     @property
     def timestamps(self) -> List[datetime]:
-        return [image_file.timestamp for image_file in self.items if image_file.timestamp is not None]
+        return [
+            image_file.timestamp
+            for image_file in self.items
+            if image_file.timestamp is not None
+        ]
 
     @property
     def timestamps_initial(self) -> List[datetime]:
@@ -227,7 +259,7 @@ class ImageFileCollection(IdentifiedCollection):
         file_path: Path,
         timestamp: datetime = None,
         timestamp_initial: datetime = None,
-        cache_image: bool = False
+        cache_image: bool = False,
     ) -> ImageFile:
         """
         Create a new ImageFile and append it to the collection
@@ -239,10 +271,10 @@ class ImageFileCollection(IdentifiedCollection):
         :returns: the new ImageFile instance
         """
         image_file = ImageFile(
-            file_path = file_path,
-            timestamp = timestamp,
-            timestamp_initial = timestamp_initial,
-            cache_image = cache_image
+            file_path=file_path,
+            timestamp=timestamp,
+            timestamp_initial=timestamp_initial,
+            cache_image=cache_image,
         )
 
         self.append(image_file)
@@ -255,7 +287,7 @@ class ImageFileCollection(IdentifiedCollection):
         path: Path,
         image_formats: List[str],
         timestamp_initial: datetime = None,
-        cache_images: bool = False
+        cache_images: bool = False,
     ) -> ImageFileCollection:
         """
         Build an ImageFileCollection from a directory containing image files
@@ -278,10 +310,10 @@ class ImageFileCollection(IdentifiedCollection):
         image_files = cls()
         for image_path in image_paths:
             image_files.add(
-                file_path = image_path,
-                timestamp = None,
-                timestamp_initial = None,
-                cache_image = False
+                file_path=image_path,
+                timestamp=None,
+                timestamp_initial=None,
+                cache_image=False,
             )
 
         # Check that timestamps were parsed correctly
