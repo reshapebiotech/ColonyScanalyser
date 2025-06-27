@@ -275,7 +275,10 @@ def colonies_filtered(
         area = array([tp.area for tp in colony.timepoints])
 
         return (
-            area.max() > 50 and diff(area).mean() > 1.4 and len(colony.timepoints) >= 3
+            len(colony.timepoints) >= 3
+            and area.max() > 50
+            and len(area) > 1
+            and diff(area).mean() > 1.4
         )
 
     # Filter colonies to remove noise, background objects and merged colonies

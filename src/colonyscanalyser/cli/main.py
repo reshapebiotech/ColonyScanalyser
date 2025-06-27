@@ -20,6 +20,7 @@ from ..align.strategy import (
     calculate_transformation_strategy,
 )
 from ..core import ImageFileCollection, Plate, PlateCollection, timepoints_from_image
+from ..core.colony import colonies_filtered, colonies_from_timepoints
 from ..io import CompressionMethod, load_file
 from ..processing.imaging import mm_to_pixels
 from ..processing.segmentation import segment_image
@@ -67,6 +68,65 @@ def image_file_to_timepoints(
             )
 
     return plate_timepoints
+
+
+def plates_colonies_from_timepoints(
+    plates: PlateCollection,
+    timepoints: Dict[int, List],
+    timepoints_distance: float = 1,
+    timestamp_diff_std: float = 10,
+    pool_size=1,
+) -> PlateCollection:
+    """
+    Group a list of Timepoints to Colony objects, and populate in a Plate instance.
+
+    :param plates: a PlateCollection instance associated with the Timepoints
+    :param timepoints: a dict of lists of Timepoint instances, with keys corresponding to Plate.id numbers
+    :param timepoints_distance: the maximum distance allowed for Colony grouping
+    :param timestamp_diff_std: the maximum allowed deviation in timestamps
+    :param pool_size: the number of logical processors available for multiprocessing
+    :returns: the collection with each plate instance populated with a collection of Colony instances
+    """
+    # Assemble data to a single iterable for starmap
+    timepoints_iter = [
+        (plates[plate_id], timepoints_list, timepoints_distance, timestamp_diff_std)
+        for plate_id, timepoints_list in timepoints.items()
+    ]
+
+    # Process and filter Timepoints to Colony objects in parallel
+    with Pool(processes=pool_size) as pool:
+        plates.items = pool.starmap(
+            func=_plate_colonies_from_timepoints_filtered, iterable=timepoints_iter
+        )
+
+    return plates
+
+
+def _plate_colonies_from_timepoints_filtered(
+    plate: Plate,
+    timepoints: List,
+    timepoints_distance: float,
+    timestamp_diff_std: float,
+) -> Plate:
+    """
+    Group a list of Timepoints to Colony objects, and filter to return only valid colonies.
+
+    :param plate: a Plate instance associated with the Timepoints
+    :param timepoints: a list of Timepoint instances
+    :param timepoints_distance: the maximum distance allowed for Colony grouping
+    :param timestamp_diff_std: the maximum allowed deviation in timestamps
+    :returns: the plate instance with a collection of Colony instances
+    """
+    if len(timepoints) > 0:
+        # Group Timepoints by Euclidean distance
+        plate.items = colonies_from_timepoints(
+            timepoints, distance_tolerance=timepoints_distance
+        )
+
+        # Filter colonies to remove noise, background objects and merged colonies
+        plate.items = colonies_filtered(plate.items, timestamp_diff_std)
+
+    return plate
 
 
 def main():
@@ -247,7 +307,34 @@ def main():
                     )
             plate_timepoints = dicts_merge(list(results))
 
-        # TODO: Add colony tracking logic here
+        if not SILENT:
+            print("Calculating colony properties")
+
+        # Calculate deviation in timestamps (i.e. likelihood of missing data)
+        from numpy import diff
+
+        timestamp_diff_std = diff(
+            [img.timestamp_elapsed.total_seconds() for img in image_files.items[1:]]
+        ).std()
+        timestamp_diff_std += config.COLONY_TIMESTAMP_DIFF_MAX
+
+        # Group and consolidate Timepoints into Colony instances
+        plates = plates_colonies_from_timepoints(
+            plates,
+            plate_timepoints,
+            config.COLONY_DISTANCE_MAX,
+            timestamp_diff_std,
+            POOL_MAX,
+        )
+
+        if not any([plate.count for plate in plates.items]):
+            if not SILENT:
+                print("Unable to locate any colonies in the images provided")
+                print(f"ColonyScanalyser analysis completed for: {BASE_PATH}")
+            sys.exit()
+        elif not SILENT:
+            for plate in plates.items:
+                print(f"{plate.count} colonies identified on plate {plate.id}")
 
     # TODO: Add data persistence logic here
     # TODO: Add visualization logic here
