@@ -157,27 +157,12 @@ class ImageFile(Unique, TimeStampElapsed):
             return None
 
     @staticmethod
-    def _load_image(
-        file_path: Path, as_gray: bool = False, plugin: str = None, **plugin_args
-    ) -> ndarray:
+    def _load_image(file_path: Path, as_gray: bool = False, **plugin_args) -> ndarray:
         from skimage.io import imread
 
         from ..processing.imaging import image_as_rgb
 
-        while True:
-            try:
-                return image_as_rgb(
-                    imread(
-                        str(file_path), as_gray=as_gray, plugin=plugin, **plugin_args
-                    )
-                )
-            except Exception:
-                if not plugin:
-                    # Retry imread once with a different plugin if none has been set
-                    # PIL is quite tolerant and may be able to handle images that the default plugin cannot
-                    plugin = "pil"
-                else:
-                    raise
+        return image_as_rgb(imread(str(file_path), as_gray=as_gray, **plugin_args))
 
     def draw_colonies_for_plate(self, plate: "Plate"):
         """

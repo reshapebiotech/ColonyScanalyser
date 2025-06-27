@@ -11,6 +11,7 @@ from collections import defaultdict
 from functools import partial
 from multiprocessing import Pool, cpu_count
 from pathlib import Path
+from typing import Dict, List
 
 from .. import config
 from ..align.strategy import (
@@ -18,11 +19,54 @@ from ..align.strategy import (
     apply_align_transform,
     calculate_transformation_strategy,
 )
-from ..core import ImageFileCollection, Plate, PlateCollection
+from ..core import ImageFileCollection, Plate, PlateCollection, timepoints_from_image
 from ..io import CompressionMethod, load_file
 from ..processing.imaging import mm_to_pixels
-from ..utils.utilities import progress_bar
+from ..processing.segmentation import segment_image
+from ..utils.utilities import dicts_merge, progress_bar
 from .args import create_parser
+
+
+def image_file_to_timepoints(
+    image_file, plates: PlateCollection, plate_noise_masks: Dict[int, "ndarray"]
+) -> Dict[int, List]:
+    """
+    Get Timepoint object data from a plate image
+
+    :param image_file: an ImageFile object
+    :param plates: a PlateCollection of Plate instances
+    :param plate_noise_masks: a dict of plate images to use as noise masks
+    :returns: a Dict of lists containing Timepoints, with the plate number as keys
+    """
+    from collections import defaultdict
+
+    from skimage.color import rgb2gray
+
+    plate_timepoints = defaultdict(list)
+
+    # Split image into individual plates
+    with image_file as img:
+        plate_images = plates.slice_plate_images(img.image)
+
+        for plate_id, plate_image in plate_images.items():
+            plate_image_gray = rgb2gray(plate_image)
+
+            # Segment each image
+            segmented_image = segment_image(
+                plate_image_gray,
+                plate_mask=plate_image_gray > 0,
+                plate_noise_mask=plate_noise_masks[plate_id],
+                area_min=1.5,
+            )
+
+            # Create Timepoint objects for each plate
+            plate_timepoints[plate_id].extend(
+                timepoints_from_image(
+                    segmented_image, img.timestamp_elapsed, image=plate_image
+                )
+            )
+
+    return plate_timepoints
 
 
 def main():
@@ -179,7 +223,30 @@ def main():
             # Use the first plate image as a noise mask
             plate_noise_masks = plates.slice_plate_images(image_file.image_gray)
 
-        # TODO: Add colony segmentation logic here
+        if not SILENT:
+            print("Processing colony data from all images")
+
+        # Process images to Timepoints
+        with Pool(processes=POOL_MAX) as pool:
+            results = list()
+            job = pool.imap(
+                func=partial(
+                    image_file_to_timepoints,
+                    plates=plates,
+                    plate_noise_masks=plate_noise_masks,
+                ),
+                iterable=image_files.items,
+                chunksize=2,
+            )
+            # Store results and update progress bar
+            for i, result in enumerate(job, start=1):
+                results.append(result)
+                if not SILENT:
+                    progress_bar(
+                        (i / image_files.count) * 100, message="Processing images"
+                    )
+            plate_timepoints = dicts_merge(list(results))
+
         # TODO: Add colony tracking logic here
 
     # TODO: Add data persistence logic here
