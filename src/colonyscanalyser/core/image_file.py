@@ -162,7 +162,7 @@ class ImageFile(Unique, TimeStampElapsed):
     ) -> ndarray:
         from skimage.io import imread
 
-        from .imaging import image_as_rgb
+        from ..processing.imaging import image_as_rgb
 
         while True:
             try:

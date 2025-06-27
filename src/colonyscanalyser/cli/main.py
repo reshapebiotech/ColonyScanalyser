@@ -6,14 +6,20 @@ ColonyScanalyser tool, handling argument parsing and delegating to the
 appropriate analysis functions.
 """
 
-from multiprocessing import cpu_count
+from functools import partial
+from multiprocessing import Pool, cpu_count
 from pathlib import Path
 
 from .. import config
-from ..align.strategy import AlignStrategy
+from ..align.strategy import (
+    AlignStrategy,
+    apply_align_transform,
+    calculate_transformation_strategy,
+)
 from ..core import ImageFileCollection, Plate, PlateCollection
 from ..io import CompressionMethod, load_file
 from ..processing.imaging import mm_to_pixels
+from ..utils.utilities import progress_bar
 from .args import create_parser
 
 
@@ -95,7 +101,43 @@ def main():
         if not SILENT:
             print(f"{image_files.count} images found")
 
-        # TODO: Add image alignment logic here
+        # Verify image alignment
+        if IMAGE_ALIGN_STRATEGY != AlignStrategy.none:
+            if not SILENT:
+                print(
+                    f"Verifying image alignment with '{IMAGE_ALIGN_STRATEGY.name}' strategy. This process will take some time"
+                )
+
+            # Initialise the model and determine which images need alignment
+            align_model, image_files_align = calculate_transformation_strategy(
+                image_files.items, IMAGE_ALIGN_STRATEGY, tolerance=IMAGE_ALIGN_TOLERANCE
+            )
+
+            # Apply image alignment according to selected strategy
+            if len(image_files_align) > 0:
+                if not SILENT:
+                    print(
+                        f"{len(image_files_align)} of {image_files.count} images require alignment"
+                    )
+
+                with Pool(processes=POOL_MAX) as pool:
+                    results = list()
+                    job = pool.imap_unordered(
+                        func=partial(apply_align_transform, align_model=align_model),
+                        iterable=image_files_align,
+                        chunksize=2,
+                    )
+                    # Store results and update progress bar
+                    for i, result in enumerate(job, start=1):
+                        results.append(result)
+                        if not SILENT:
+                            progress_bar(
+                                (i / len(image_files_align)) * 100,
+                                message="Correcting image alignment",
+                            )
+
+                    image_files.update(results)
+
         # TODO: Add plate detection logic here
         # TODO: Add colony segmentation logic here
         # TODO: Add colony tracking logic here

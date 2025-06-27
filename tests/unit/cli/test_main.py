@@ -258,3 +258,90 @@ class TestMainCLI:
                         main()
                     except SystemExit:
                         pass  # Expected due to successful completion
+
+    def test_image_alignment_integration(self):
+        """Test that image alignment is properly integrated."""
+        test_path = "/test/path"
+
+        with patch(
+            "sys.argv",
+            ["colonyscanalyser", test_path, "--image-align", "quick", "--verbose"],
+        ):
+            with patch("colonyscanalyser.cli.main.Path") as mock_path:
+                with patch("colonyscanalyser.cli.main.ImageFileCollection") as mock_ifc:
+                    with patch(
+                        "colonyscanalyser.cli.main.calculate_transformation_strategy"
+                    ) as mock_calc:
+                        with patch(
+                            "colonyscanalyser.cli.main.apply_align_transform"
+                        ) as mock_apply:
+                            with patch("colonyscanalyser.cli.main.Pool") as mock_pool:
+                                with patch(
+                                    "colonyscanalyser.cli.main.progress_bar"
+                                ) as mock_progress:
+                                    mock_path.return_value.resolve.return_value.exists.return_value = True
+
+                                    # Mock image collection
+                                    mock_collection = MagicMock()
+                                    mock_collection.count = 5
+                                    mock_collection.items = [
+                                        MagicMock() for _ in range(5)
+                                    ]
+                                    mock_ifc.from_path.return_value = mock_collection
+
+                                    # Mock alignment strategy calculation
+                                    mock_align_model = MagicMock()
+                                    mock_images_to_align = [MagicMock(), MagicMock()]
+                                    mock_calc.return_value = (
+                                        mock_align_model,
+                                        mock_images_to_align,
+                                    )
+
+                                    # Mock multiprocessing pool
+                                    mock_pool_instance = MagicMock()
+                                    mock_pool.return_value.__enter__.return_value = (
+                                        mock_pool_instance
+                                    )
+                                    mock_pool_instance.imap_unordered.return_value = [
+                                        MagicMock(),
+                                        MagicMock(),
+                                    ]
+
+                                    try:
+                                        main()
+                                    except SystemExit:
+                                        pass  # Expected due to successful completion
+
+                                    # Verify alignment functions were called
+                                    mock_calc.assert_called_once()
+                                    mock_pool_instance.imap_unordered.assert_called_once()
+
+                                    # Verify progress bar was called
+                                    assert mock_progress.call_count > 0
+
+    def test_image_alignment_none_strategy(self):
+        """Test that alignment is skipped when strategy is 'none'."""
+        test_path = "/test/path"
+
+        with patch(
+            "sys.argv",
+            ["colonyscanalyser", test_path, "--image-align", "none"],
+        ):
+            with patch("colonyscanalyser.cli.main.Path") as mock_path:
+                with patch("colonyscanalyser.cli.main.ImageFileCollection") as mock_ifc:
+                    with patch(
+                        "colonyscanalyser.cli.main.calculate_transformation_strategy"
+                    ) as mock_calc:
+                        mock_path.return_value.resolve.return_value.exists.return_value = True
+
+                        mock_collection = MagicMock()
+                        mock_collection.count = 5
+                        mock_ifc.from_path.return_value = mock_collection
+
+                        try:
+                            main()
+                        except SystemExit:
+                            pass  # Expected due to successful completion
+
+                        # Verify alignment functions were NOT called
+                        mock_calc.assert_not_called()
