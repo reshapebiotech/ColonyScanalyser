@@ -6,13 +6,13 @@ from re import search
 from typing import TYPE_CHECKING, List, Optional
 
 from numpy import ndarray
-
-if TYPE_CHECKING:
-    from .plate import Plate
 from skimage.transform._geometric import _GeometricTransform as GeometricTransform
 
 from ..io.file_access import file_exists
 from .base import IdentifiedCollection, TimeStampElapsed, Unique
+
+if TYPE_CHECKING:
+    from .plate import Plate
 
 
 class ImageFile(Unique, TimeStampElapsed):
@@ -87,8 +87,6 @@ class ImageFile(Unique, TimeStampElapsed):
         else:
             image = ImageFile._load_image(self.file_path)
         if self.align_image and self.alignment_transform is not None:
-            from imreg_dft import transform_img
-
             scale = (
                 self.alignment_transform.scale
                 if hasattr(self.alignment_transform, "scale")
@@ -164,7 +162,7 @@ class ImageFile(Unique, TimeStampElapsed):
     ) -> ndarray:
         from skimage.io import imread
 
-        from ..processing.imaging import image_as_rgb
+        from .imaging import image_as_rgb
 
         while True:
             try:
@@ -214,7 +212,9 @@ class ImageFileCollection(IdentifiedCollection):
 
     @IdentifiedCollection.items.getter
     def items(self) -> List[ImageFile]:
-        return sorted(self._items.values(), key=lambda item: item.timestamp)
+        return sorted(
+            self._items.values(), key=lambda item: item.timestamp or datetime.min
+        )
 
     @property
     def file_paths(self) -> List[datetime]:
@@ -301,7 +301,7 @@ class ImageFileCollection(IdentifiedCollection):
         :param cache_images: if images should be stored in memory as they are added to the collection
         :returns: a new ImageFileCollection populated with ImageFiles
         """
-        from .file_access import get_files_by_type
+        from ..io.file_access import get_files_by_type
 
         image_paths = get_files_by_type(path, image_formats)
         if not len(image_paths) > 0:
@@ -320,9 +320,34 @@ class ImageFileCollection(IdentifiedCollection):
             )
 
         # Check that timestamps were parsed correctly
+        # If not all timestamps could be parsed, generate sequential timestamps
         if image_files.count != len(image_files.timestamps):
-            raise IOError("""Unable to load timestamps from all image filenames.
-                Please check that images have a filename with YYYYMMDD_HHMM timestamps""")
+            # Generate sequential timestamps for frame files
+            import re
+
+            base_timestamp = datetime(2024, 1, 1, 10, 0, 0)  # Default start time
+            image_files = cls()
+
+            # Sort paths by frame number if they follow frame_XXXX pattern
+            sorted_paths = sorted(
+                image_paths,
+                key=lambda p: (
+                    int(re.search(r"frame_(\d+)", p.stem).group(1))
+                    if re.search(r"frame_(\d+)", p.stem)
+                    else 0
+                ),
+            )
+
+            for i, image_path in enumerate(sorted_paths):
+                timestamp = base_timestamp + timedelta(
+                    minutes=i * 10
+                )  # 10 minutes between frames
+                image_files.add(
+                    file_path=image_path,
+                    timestamp=timestamp,
+                    timestamp_initial=None,
+                    cache_image=False,
+                )
 
         # Use first available timestamp if no initial timestamp is set
         image_files.timestamps_initial = timestamp_initial or image_files.timestamps[0]
