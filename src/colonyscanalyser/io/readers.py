@@ -33,6 +33,10 @@ def load_image(
     if not file_path.exists():
         raise FileNotFoundError(f"Image file not found: {file_path}")
 
+    # Handle legacy parameter name
+    if "ensure_rgb" in kwargs:
+        as_rgb = kwargs.pop("ensure_rgb")
+
     try:
         image = imread(str(file_path), as_gray=as_gray, **kwargs)
     except Exception as e:

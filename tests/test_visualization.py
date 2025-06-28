@@ -240,7 +240,7 @@ class TestPlottingFunctions:
             plot_colony_map(sample_image, [sample_plate], save_path)
 
             # Check that plot file was created
-            files = list(save_path.glob("*colony_map*.png"))
+            files = list(save_path.glob("*plate_map*.png"))
             assert len(files) > 0
 
     def test_plot_appearance_frequency(self, sample_plate):

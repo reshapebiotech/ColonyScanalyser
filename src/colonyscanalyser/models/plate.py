@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import List, Optional, Tuple
 
+from numpy import ndarray
+
 from .base import IdentifiedCollection
 from .colony import Colony
 
@@ -44,6 +46,49 @@ class Plate:
             if colony.id == colony_id:
                 return colony
         return None
+
+    def slice_plate_image(
+        self, image: ndarray, background_color: Tuple = (0,)
+    ) -> ndarray:
+        """
+        Extract plate region from full image.
+
+        Args:
+            image: Full image as numpy array
+            background_color: Color to use for background areas
+
+        Returns:
+            Cropped plate image
+        """
+        from ..utils.geometry import crop_circle_from_image
+
+        return crop_circle_from_image(
+            image,
+            center=self.center,
+            radius=self.radius - self.edge_cut,
+            background_color=background_color,
+        )
+
+    @property
+    def growth_curve(self) -> "GrowthCurve":
+        """Calculate aggregated growth curve from all colonies on this plate."""
+        from collections import defaultdict
+
+        from .colony import GrowthCurve
+
+        if not self.colonies:
+            return GrowthCurve({})
+
+        # Aggregate data from all colonies
+        aggregated_data = defaultdict(list)
+
+        for colony in self.colonies:
+            colony_curve = colony.growth_curve
+            for timestamp, area in colony_curve.data.items():
+                aggregated_data[timestamp].append(area)
+
+        # Keep the lists of areas for each timestamp for median calculation
+        return GrowthCurve(dict(aggregated_data))
 
 
 @dataclass

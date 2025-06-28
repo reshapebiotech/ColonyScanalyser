@@ -49,7 +49,7 @@ def plot_colony_map(plate_image: ndarray, plates: List[Plate], save_path: Path) 
             xycoords="data",
             horizontalalignment="center",
             verticalalignment="center",
-            fontsize="40",
+            fontsize=40,
             backgroundcolor="black",
             color="white",
         )
@@ -60,7 +60,7 @@ def plot_colony_map(plate_image: ndarray, plates: List[Plate], save_path: Path) 
                 xycoords="data",
                 horizontalalignment="center",
                 verticalalignment="center",
-                fontsize="32",
+                fontsize=32,
                 backgroundcolor="black",
                 color="white",
             )
@@ -71,7 +71,7 @@ def plot_colony_map(plate_image: ndarray, plates: List[Plate], save_path: Path) 
             radius=plate.radius,
             facecolor="none",
             edgecolor="purple",
-            linewidth="2.5",
+            linewidth=2.5,
             linestyle="-",
             label="Detected plate boundary",
         )
@@ -83,7 +83,7 @@ def plot_colony_map(plate_image: ndarray, plates: List[Plate], save_path: Path) 
             radius=plate.radius - plate.edge_cut,
             facecolor="none",
             edgecolor="white",
-            linewidth="1.5",
+            linewidth=1.5,
             linestyle="--",
             label="Colony detection area",
         )
@@ -91,6 +91,8 @@ def plot_colony_map(plate_image: ndarray, plates: List[Plate], save_path: Path) 
 
         # Mark colony centres and ID numbers
         for colony in plate.colonies:
+            if colony.center is None or colony.timepoint_last is None:
+                continue
             x, y = rc_to_xy(colony.center)
             x = offset_x + x
             y = offset_y + y
@@ -103,7 +105,7 @@ def plot_colony_map(plate_image: ndarray, plates: List[Plate], save_path: Path) 
                 color="red",
                 horizontalalignment="center",
                 verticalalignment="center",
-                fontsize="x-small",
+                fontsize=8,
             )
             ax.annotate(
                 colony.id,
@@ -116,7 +118,7 @@ def plot_colony_map(plate_image: ndarray, plates: List[Plate], save_path: Path) 
                 alpha=0.85,
                 backgroundcolor="black",
                 color="white",
-                fontsize="small",
+                fontsize=10,
             )
             # Mark the calculated radius of the colony
             colony_circle = plt.Circle(
@@ -135,8 +137,8 @@ def plot_colony_map(plate_image: ndarray, plates: List[Plate], save_path: Path) 
         handles=[plate_circle, plate_circle_measured, colony_circle],
         loc="lower center",
         facecolor="lightgray",
-        shadow="true",
-        fontsize="18",
+        shadow=True,
+        fontsize=18,
     )
 
     save_path = save_path.joinpath("plate_map.png")
@@ -343,9 +345,23 @@ def growth_curve(
 
     # Plot the smoothed median
     median = [median(val) for _, val in sorted(plate.growth_curve.data.items())]
+
+    # Only apply smoothing if we have enough data points
+    if len(median) >= 15:
+        smoothed_median = savgol_filter(median, 15, 2)
+    elif len(median) >= 5:
+        # Use smaller window for fewer points
+        window_size = min(len(median), 5)
+        if window_size % 2 == 0:  # Window size must be odd
+            window_size -= 1
+        smoothed_median = savgol_filter(median, window_size, min(2, window_size - 1))
+    else:
+        # Too few points for smoothing, use raw data
+        smoothed_median = median
+
     ax.plot(
         [td.total_seconds() / 3600 for td in sorted(plate.growth_curve.data.keys())],
-        savgol_filter(median, 15, 2),
+        smoothed_median,
         color=line_color,
         label="Smoothed median" if growth_params else f"Plate {plate.id}",
         linewidth=2,

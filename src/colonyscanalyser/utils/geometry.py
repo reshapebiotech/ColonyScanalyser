@@ -1,16 +1,19 @@
-from typing import Union, Tuple
 from abc import ABC, abstractmethod
 from math import pi
+from typing import Tuple, Union
 
 
 class Shape(ABC):
     """
     An abstract class to provide the fundamental properties of a surface
     """
+
     @property
     @abstractmethod
     def area(self) -> float:
-        raise NotImplementedError("This property must be implemented in a derived class")
+        raise NotImplementedError(
+            "This property must be implemented in a derived class"
+        )
 
     @property
     def center(self) -> Union[Tuple[float, float], Tuple[float, float, float]]:
@@ -48,7 +51,9 @@ class Shape(ABC):
     @property
     @abstractmethod
     def perimeter(self) -> float:
-        raise NotImplementedError("This property must be implemented in a derived class")
+        raise NotImplementedError(
+            "This property must be implemented in a derived class"
+        )
 
     @property
     def width(self) -> float:
@@ -66,6 +71,7 @@ class Circle(Shape):
     """
     An object to generate the properties of a circle
     """
+
     def __init__(self, diameter: float):
         self.diameter = diameter
 
@@ -99,6 +105,67 @@ class Circle(Shape):
     @property
     def radius(self) -> float:
         return self.diameter / 2
+
+
+def crop_circle_from_image(
+    image, center: Tuple[float, float], radius: float, background_color: Tuple = (0,)
+):
+    """
+    Extract circular region from image.
+
+    Args:
+        image: Input image as numpy array
+        center: Center coordinates (x, y)
+        radius: Radius of circle to extract
+        background_color: Color for areas outside the circle
+
+    Returns:
+        Cropped circular image
+    """
+    import numpy as np
+
+    # Get image dimensions
+    height, width = image.shape[:2]
+
+    # Calculate bounding box
+    cx, cy = center
+    x_min = max(0, int(cx - radius))
+    x_max = min(width, int(cx + radius))
+    y_min = max(0, int(cy - radius))
+    y_max = min(height, int(cy + radius))
+
+    # Create cropped image
+    cropped_height = y_max - y_min
+    cropped_width = x_max - x_min
+
+    if len(image.shape) == 3:
+        cropped = np.full(
+            (cropped_height, cropped_width, image.shape[2]),
+            background_color[0],
+            dtype=image.dtype,
+        )
+    else:
+        cropped = np.full(
+            (cropped_height, cropped_width), background_color[0], dtype=image.dtype
+        )
+
+    # Create circular mask
+    y_coords, x_coords = np.ogrid[:cropped_height, :cropped_width]
+    center_x_rel = cx - x_min
+    center_y_rel = cy - y_min
+
+    mask = (
+        (x_coords - center_x_rel) ** 2 + (y_coords - center_y_rel) ** 2
+    ) <= radius**2
+
+    # Apply the original image within the circular mask
+    if len(image.shape) == 3:
+        for channel in range(image.shape[2]):
+            cropped[mask, channel] = image[y_min:y_max, x_min:x_max, channel][mask]
+    else:
+        cropped[mask] = image[y_min:y_max, x_min:x_max][mask]
+
+    return cropped
 
     @property
     def width(self) -> float:

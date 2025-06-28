@@ -6,7 +6,7 @@ ColonyScanalyser command line tool. It delegates to the CLI module for actual
 command processing.
 """
 
-from .cli.main import main
+from colonyscanalyser.cli.main import main
 
 if __name__ == "__main__":
     main()
