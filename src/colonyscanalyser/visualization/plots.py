@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Tuple
 
-import matplotlib.cm as cm
+import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 from numpy import ndarray
@@ -219,7 +219,7 @@ def plot_plate_images_animation(
     from functools import partial
     from multiprocessing import Pool
 
-    from .file_access import create_subdirectory, file_safe_name
+    from ..io.file_access import create_subdirectory, file_safe_name
 
     # Divide up image files between processes and assemble results
     chunk_size = int(len(image_files) // pool_max)
@@ -262,7 +262,7 @@ def plot_growth_curve(plates: List[Plate], save_path: Path) -> Path:
     :returns: a file path object if the plot was saved sucessfully
     """
     _, ax = plt.subplots()
-    colormap = cm.get_cmap("plasma")
+    colormap = matplotlib.colormaps["plasma"]
     growth_params = True
 
     for plate in plates:
@@ -322,7 +322,7 @@ def growth_curve(
     """
     from statistics import median
 
-    from .utilities import savgol_filter
+    from scipy.signal import savgol_filter
 
     if line_color is None:
         line_color = scatter_color
@@ -398,14 +398,14 @@ def plot_appearance_frequency(  # noqa: C901
     :returns: a file path object if the plot was saved sucessfully
     """
     _, ax = plt.subplots()
-    colormap = cm.get_cmap("plasma")
+    colormap = matplotlib.colormaps["plasma"]
     figures = list()
 
-    if len(plates) == 1 and not plates[0].count > 0:
+    if len(plates) == 1 and not plates[0].colony_count > 0:
         return
 
     for plate in plates:
-        if not plate.count > 0:
+        if not plate.colony_count > 0:
             continue
         if len(plates) > 1:
             # Get a color from the colourmap
@@ -526,15 +526,18 @@ def plot_doubling_map(plates: List[Plate], save_path: Path) -> Path:
     y = [0]
 
     for plate in plates:
-        if not plate.count > 0:
+        if not plate.colony_count > 0:
             return
         x.extend(
-            [colony.time_of_appearance.total_seconds() / 3600 for colony in plate.items]
+            [
+                colony.time_of_appearance.total_seconds() / 3600
+                for colony in plate.colonies
+            ]
         )
         y.extend(
             [
                 colony.growth_curve.doubling_time.total_seconds() / 60
-                for colony in plate.items
+                for colony in plate.colonies
             ]
         )
 

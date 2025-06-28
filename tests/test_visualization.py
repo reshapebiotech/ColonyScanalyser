@@ -123,9 +123,17 @@ def sample_image_file():
     import tempfile
     from datetime import datetime
 
+    from skimage.io import imsave
+
     # Create a temporary file for testing
-    temp_file = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False)
+    temp_file = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
     temp_file.close()
+
+    # Create actual image data
+    image_data = np.random.randint(0, 255, (200, 200, 3), dtype=np.uint8)
+
+    # Save the image to the temporary file
+    imsave(temp_file.name, image_data)
 
     return ImageFile(
         file_path=Path(temp_file.name),
@@ -200,7 +208,8 @@ class TestDrawingFunctions:
 
         with tempfile.TemporaryDirectory() as temp_dir:
             save_path = Path(temp_dir)
-            plates = PlateCollection([sample_plate])
+            plates = PlateCollection()
+            plates.add(sample_plate)
 
             save_colony_visualizations(plates, sample_image_file, save_path)
 
@@ -266,11 +275,12 @@ class TestPlottingFunctions:
         self, mock_savefig, sample_plate, sample_image_file
     ):
         """Test creating plate image animations."""
-        from colonyscanalyser.models.image import ImageFileCollection
+        from colonyscanalyser.models.image import ImageCollection
         from colonyscanalyser.models.plate import PlateCollection
 
-        plates = PlateCollection([sample_plate])
-        image_files = ImageFileCollection([sample_image_file])
+        plates = PlateCollection()
+        plates.add(sample_plate)
+        image_files = ImageCollection([sample_image_file])
 
         with tempfile.TemporaryDirectory() as temp_dir:
             save_path = Path(temp_dir)

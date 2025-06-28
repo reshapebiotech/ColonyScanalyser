@@ -405,102 +405,99 @@ def save_colony_visualizations(
 
     from skimage.io import imsave
 
+    from ..io.readers import load_image
+
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
     saved_files = []
 
-    with image_file as img:
-        base_name = image_file.file_path.stem
+    # Load the image
+    img = load_image(image_file.file_path)
+    base_name = image_file.file_path.stem
 
-        # Create visualizations with full image if requested
-        if use_full_image:
-            # Create separate full image visualizations for each plate
-            for plate in plates.items:
-                if len(plate.items) == 0:
-                    continue
+    # Create visualizations with full image if requested
+    if use_full_image:
+        # Create separate full image visualizations for each plate
+        for plate in plates.items:
+            if len(plate.colonies) == 0:
+                continue
 
-                plate_suffix = f"_plate{plate.id}_full"
+            plate_suffix = f"_plate{plate.id}_full"
 
-                if save_ids:
-                    # Create full image with single plate overlay and colony IDs
-                    full_ids_overlay = draw_plate_overlay(
-                        img.image, plate, show_label=True, show_boundary=True
-                    )
-                    full_ids_overlay = draw_colony_ids_on_full_image(
-                        full_ids_overlay, plate, img.timestamp_elapsed
-                    )
-                    full_ids_file = output_dir / f"{base_name}{plate_suffix}_ids.png"
-                    imsave(str(full_ids_file), full_ids_overlay)
-                    saved_files.append(full_ids_file)
-
-                if save_comprehensive:
-                    # Create full image with single plate overlay and colony outlines
-                    full_comp_overlay = draw_plate_overlay(
-                        img.image, plate, show_label=True, show_boundary=True
-                    )
-                    full_comp_overlay = draw_colony_outlines_on_full_image(
-                        full_comp_overlay, plate, img.timestamp_elapsed, show_ids=True
-                    )
-                    full_comp_file = (
-                        output_dir / f"{base_name}{plate_suffix}_comprehensive.png"
-                    )
-                    imsave(str(full_comp_file), full_comp_overlay)
-                    saved_files.append(full_comp_file)
-
-        # Create plate-only visualizations if requested
-        if save_plate_only or not use_full_image:
-            for plate in plates.items:
-                if len(plate.items) == 0:
-                    continue
-
-                # Extract plate image
-                plate_image = plate.slice_plate_image(img.image)
-                plate_suffix = f"_plate{plate.id}" + (
-                    "_cropped" if use_full_image else ""
+            if save_ids:
+                # Create full image with single plate overlay and colony IDs
+                full_ids_overlay = draw_plate_overlay(
+                    img, plate, show_label=True, show_boundary=True
                 )
+                full_ids_overlay = draw_colony_ids_on_full_image(
+                    full_ids_overlay, plate, image_file.timestamp
+                )
+                full_ids_file = output_dir / f"{base_name}{plate_suffix}_ids.png"
+                imsave(str(full_ids_file), full_ids_overlay)
+                saved_files.append(full_ids_file)
 
-                if save_masks:
-                    mask_overlay = draw_colony_masks(
-                        plate_image, plate.items, img.timestamp_elapsed, alpha=0.4
-                    )
-                    mask_file = output_dir / f"{base_name}{plate_suffix}_masks.png"
-                    imsave(str(mask_file), mask_overlay)
-                    saved_files.append(mask_file)
+            if save_comprehensive:
+                # Create full image with single plate overlay and colony outlines
+                full_comp_overlay = draw_plate_overlay(
+                    img, plate, show_label=True, show_boundary=True
+                )
+                full_comp_overlay = draw_colony_outlines_on_full_image(
+                    full_comp_overlay, plate, image_file.timestamp, show_ids=True
+                )
+                full_comp_file = (
+                    output_dir / f"{base_name}{plate_suffix}_comprehensive.png"
+                )
+                imsave(str(full_comp_file), full_comp_overlay)
+                saved_files.append(full_comp_file)
 
-                if save_ids:
-                    ids_overlay = draw_colony_ids(
-                        plate_image, plate.items, img.timestamp_elapsed, font_size=10
-                    )
-                    ids_file = output_dir / f"{base_name}{plate_suffix}_ids.png"
-                    imsave(str(ids_file), ids_overlay)
-                    saved_files.append(ids_file)
+    # Create plate-only visualizations if requested
+    if save_plate_only or not use_full_image:
+        for plate in plates.items:
+            if len(plate.colonies) == 0:
+                continue
 
-                if save_outlines:
-                    outlines_overlay = draw_colony_outlines(
-                        plate_image, plate.items, img.timestamp_elapsed, show_ids=True
-                    )
-                    outlines_file = (
-                        output_dir / f"{base_name}{plate_suffix}_outlines.png"
-                    )
-                    imsave(str(outlines_file), outlines_overlay)
-                    saved_files.append(outlines_file)
+            # Extract plate image
+            plate_image = plate.slice_plate_image(img)
+            plate_suffix = f"_plate{plate.id}" + ("_cropped" if use_full_image else "")
 
-                if save_comprehensive:
-                    comprehensive = create_colony_visualization(
-                        plate_image,
-                        plate,
-                        img.timestamp_elapsed,
-                        show_masks=False,
-                        show_ids=True,
-                        show_outlines=True,
-                        show_plate=False,  # Already cropped to plate
-                    )
-                    comp_file = (
-                        output_dir / f"{base_name}{plate_suffix}_comprehensive.png"
-                    )
-                    imsave(str(comp_file), comprehensive)
-                    saved_files.append(comp_file)
+            if save_masks:
+                mask_overlay = draw_colony_masks(
+                    plate_image, plate.colonies, image_file.timestamp, alpha=0.4
+                )
+                mask_file = output_dir / f"{base_name}{plate_suffix}_masks.png"
+                imsave(str(mask_file), mask_overlay)
+                saved_files.append(mask_file)
+
+            if save_ids:
+                ids_overlay = draw_colony_ids(
+                    plate_image, plate.colonies, image_file.timestamp, font_size=10
+                )
+                ids_file = output_dir / f"{base_name}{plate_suffix}_ids.png"
+                imsave(str(ids_file), ids_overlay)
+                saved_files.append(ids_file)
+
+            if save_outlines:
+                outlines_overlay = draw_colony_outlines(
+                    plate_image, plate.colonies, image_file.timestamp, show_ids=True
+                )
+                outlines_file = output_dir / f"{base_name}{plate_suffix}_outlines.png"
+                imsave(str(outlines_file), outlines_overlay)
+                saved_files.append(outlines_file)
+
+            if save_comprehensive:
+                comprehensive = create_colony_visualization(
+                    plate_image,
+                    plate,
+                    image_file.timestamp,
+                    show_masks=False,
+                    show_ids=True,
+                    show_outlines=True,
+                    show_plate=False,  # Already cropped to plate
+                )
+                comp_file = output_dir / f"{base_name}{plate_suffix}_comprehensive.png"
+                imsave(str(comp_file), comprehensive)
+                saved_files.append(comp_file)
 
     return saved_files
 
@@ -521,7 +518,7 @@ def draw_colony_ids_on_full_image(
     from matplotlib.backends.backend_agg import FigureCanvasAgg
     from matplotlib.figure import Figure
 
-    if len(plate.items) == 0:
+    if len(plate.colonies) == 0:
         return image
 
     # Create matplotlib figure matching image size
@@ -539,7 +536,7 @@ def draw_colony_ids_on_full_image(
     offset_y = center_y - plate.radius + plate.edge_cut
     offset_x = center_x - plate.radius + plate.edge_cut
 
-    for colony in plate.items:
+    for colony in plate.colonies:
         # Find timepoint for this timestamp
         timepoint = colony.get_timepoint(timestamp)
         if timepoint is not None:
@@ -604,7 +601,7 @@ def draw_colony_outlines_on_full_image(
     from matplotlib.backends.backend_agg import FigureCanvasAgg
     from matplotlib.figure import Figure
 
-    if len(plate.items) == 0:
+    if len(plate.colonies) == 0:
         return image
 
     # Create matplotlib figure matching image size
@@ -622,7 +619,7 @@ def draw_colony_outlines_on_full_image(
     offset_y = center_y - plate.radius + plate.edge_cut
     offset_x = center_x - plate.radius + plate.edge_cut
 
-    for colony in plate.items:
+    for colony in plate.colonies:
         # Find timepoint for this timestamp
         timepoint = colony.get_timepoint(timestamp)
         if timepoint is not None:
