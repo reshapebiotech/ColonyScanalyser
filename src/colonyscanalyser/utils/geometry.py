@@ -167,6 +167,37 @@ def crop_circle_from_image(
 
     return cropped
 
+
+def mm_to_pixels(
+    millimeters: float,
+    dots_per_inch: float = 300,
+    pixels_per_mm: Union[float, None] = None,
+) -> float:
+    """
+    Convert a measurement in millimetres to image pixels.
+
+    Args:
+        millimeters: The measurement to convert
+        dots_per_inch: The conversion factor
+        pixels_per_mm: Optional conversion factor, instead of DPI
+
+    Returns:
+        A value in pixels
+    """
+    if (
+        millimeters <= 0
+        or dots_per_inch <= 0
+        or (pixels_per_mm is not None and pixels_per_mm <= 0)
+    ):
+        raise ValueError("All supplied arguments must be positive values")
+
+    factor = dots_per_inch / 25.4
+
+    if pixels_per_mm is not None:
+        factor = pixels_per_mm
+
+    return int(millimeters * factor)
+
     @property
     def width(self) -> float:
         return self.diameter

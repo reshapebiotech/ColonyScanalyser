@@ -159,3 +159,43 @@ def segment_plate_image(
     )
 
     return labeled
+
+
+def remove_background_mask(
+    image: ndarray, smoothing: float = 1, sigmoid_cutoff: float = 0.4, **filter_args
+) -> ndarray:
+    """
+    Separate the image foreground from the background.
+
+    Returns a boolean mask of the image foreground.
+
+    Args:
+        image: An image as a numpy array
+        smoothing: A sigma value for the gaussian filter
+        sigmoid_cutoff: Cutoff for the sigmoid exposure function
+        filter_args: Arguments to pass to the gaussian filter
+
+    Returns:
+        A boolean image mask of the foreground
+    """
+    from skimage import img_as_bool
+    from skimage.exposure import adjust_sigmoid
+    from skimage.filters import gaussian, threshold_triangle
+
+    if image.size == 0:
+        raise ValueError("The supplied image cannot be empty")
+
+    image = image.astype("float64", copy=True)
+
+    # Do not process the image if it is empty
+    if not image.any():
+        return img_as_bool(image)
+
+    # Apply smoothing to reduce noise
+    image = gaussian(image, smoothing, **filter_args)
+
+    # Heighten contrast
+    image = adjust_sigmoid(image, cutoff=sigmoid_cutoff, gain=10)
+
+    # Find background threshold and return only foreground
+    return image < threshold_triangle(image, nbins=10)

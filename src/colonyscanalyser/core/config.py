@@ -59,7 +59,7 @@ class ProcessingConfig:
         """Calculate derived values after initialization."""
         from multiprocessing import cpu_count
 
-        from ..processing.imaging import mm_to_pixels
+        from ..utils.geometry import mm_to_pixels
 
         # Calculate pixel values from millimeters
         self.plate_size_pixels = int(
