@@ -68,17 +68,15 @@ class SimplePipelineProcessor:
             RuntimeError: If pipeline execution fails
         """
         try:
-            self._log_info("Starting ColonyScanalyser analysis")
-            self._log_info(f"Working directory: {self.config.input_dir}")
+            self._log_info("Starting colony analysis")
+            self._log_info(f"Input: {self.config.input_dir}")
 
             start_time = time.time()
 
             # Execute pipeline stages
             for i, stage in enumerate(self.stages):
-                stage_name = stage.__class__.__name__
-                self._log_info(
-                    f"Executing stage {i + 1}/{len(self.stages)}: {stage_name}"
-                )
+                stage_name = stage.__class__.__name__.replace("Stage", " Stage")
+                self._log_info(f"Stage {i + 1}/{len(self.stages)}: {stage_name}")
 
                 try:
                     stage_start = time.time()
@@ -92,11 +90,11 @@ class SimplePipelineProcessor:
                         break
 
                 except Exception as e:
-                    self._log_error(f"Error in {stage_name}: {e}")
-                    raise RuntimeError(f"Pipeline failed at stage {stage_name}") from e
+                    self._log_error(f"{stage_name} failed: {e}")
+                    raise RuntimeError(f"Pipeline failed at {stage_name}") from e
 
             total_duration = time.time() - start_time
-            self._log_info(f"Pipeline completed successfully in {total_duration:.2f}s")
+            self._log_info(f"Analysis completed in {total_duration:.2f}s")
 
             # Log final results
             self._log_results()
@@ -107,7 +105,7 @@ class SimplePipelineProcessor:
             self._log_info("Pipeline interrupted by user")
             sys.exit(1)
         except Exception as e:
-            self._log_error(f"Pipeline execution failed: {e}")
+            self._log_error(f"Analysis failed: {e}")
             # Always show traceback for debugging
             if True:
                 import traceback
@@ -203,7 +201,7 @@ class SimplePipelineProcessor:
         if plates is not None:
             total_colonies = sum(len(plate.colonies) for plate in plates)
             if total_colonies == 0:
-                self._log_info("No colonies found in any plates")
+                self._log_info("No colonies found")
                 return True
 
         return False
@@ -213,27 +211,23 @@ class SimplePipelineProcessor:
         plates = self.context.get("plates")
         if plates:
             total_colonies = sum(len(plate.colonies) for plate in plates)
-            self._log_info(
-                f"Analysis complete: {total_colonies} colonies found across {len(plates)} plates"
-            )
+            self._log_info(f"Found {total_colonies} colonies on {len(plates)} plates")
 
             for plate in plates:
                 colony_count = len(plate.colonies)
-                self._log_info(
-                    f"Plate {plate.id} ({plate.name}): {colony_count} colonies"
-                )
+                self._log_info(f"Plate {plate.id}: {colony_count} colonies")
 
         # Log other results
         if "visualization_files" in self.context:
             viz_count = len(self.context["visualization_files"])
-            self._log_info(f"Generated {viz_count} visualization files")
+            self._log_info(f"Saved {viz_count} visualizations")
 
         if self.context.get("data_saved", False):
-            self._log_info("Analysis data saved for future use")
+            self._log_info("Data saved")
 
     def _create_default_logger(self) -> logging.Logger:
         """Create a default logger for pipeline operations."""
-        logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
+        logger = logging.getLogger("pipeline")
 
         # Set level to INFO by default
         logger.setLevel(logging.INFO)
@@ -241,27 +235,23 @@ class SimplePipelineProcessor:
         # Create console handler if none exists
         if not logger.handlers:
             handler = logging.StreamHandler()
-            formatter = logging.Formatter(
-                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-            )
+            formatter = logging.Formatter("%(name)s: %(message)s")
             handler.setFormatter(formatter)
             logger.addHandler(handler)
 
         return logger
 
     def _log_info(self, message: str) -> None:
-        """Log info message and print."""
+        """Log info message."""
         self.logger.info(message)
-        print(message)
 
     def _log_debug(self, message: str) -> None:
         """Log debug message."""
         self.logger.debug(message)
 
     def _log_error(self, message: str) -> None:
-        """Log error message and print."""
+        """Log error message."""
         self.logger.error(message)
-        print(f"ERROR: {message}")
 
 
 class ColonyPipelineProcessor(SimplePipelineProcessor):

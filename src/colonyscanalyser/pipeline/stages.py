@@ -6,6 +6,7 @@ to create different analysis workflows. Each stage has a single
 responsibility and clean interfaces.
 """
 
+import logging
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from functools import partial
@@ -42,6 +43,7 @@ class PipelineStage(ABC):
     ):
         self.config = config
         self.progress_callback = progress_callback
+        self.log = logging.getLogger("")
 
     @abstractmethod
     def execute(self, context: Dict[str, Any]) -> Dict[str, Any]:
@@ -212,6 +214,7 @@ class PlateDetectionStage(PipelineStage):
         # Create plates based on lattice configuration
         plates = self._create_plates_from_lattice(image)
 
+        self.log.info("Plates detected")
         # Create noise masks for each plate
         noise_masks = self._create_noise_masks(image, plates)
 

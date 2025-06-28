@@ -569,7 +569,7 @@ class TestPipelineLogging:
         processor = SimplePipelineProcessor(sample_config)
 
         assert processor.logger is not None
-        assert processor.logger.name.endswith("SimplePipelineProcessor")
+        assert processor.logger.name == "pipeline"
 
     def test_custom_logger(self, sample_config):
         """Test using custom logger."""
