@@ -115,3 +115,47 @@ def remove_background(
     result = np.clip(result, 0, None)
 
     return result.astype(image.dtype)
+
+
+def segment_plate_image(
+    plate_image: ndarray,
+    noise_mask: Optional[ndarray] = None,
+    min_area: float = 2.0,
+) -> ndarray:
+    """
+    Segment a plate image to identify colonies.
+
+    Args:
+        plate_image: Input plate image (grayscale or RGB)
+        noise_mask: Optional noise mask to improve segmentation
+        min_area: Minimum area for detected colonies
+
+    Returns:
+        Labeled image with each colony having a unique integer label
+    """
+    # Convert to grayscale if needed
+    if len(plate_image.shape) == 3:
+        from skimage.color import rgb2gray
+
+        gray_image = rgb2gray(plate_image)
+    else:
+        gray_image = plate_image
+
+    # Apply noise reduction if mask provided
+    if noise_mask is not None:
+        # Simple background subtraction using noise mask
+        gray_image = remove_background(gray_image, sigma=1.0)
+
+    # Create plate mask (circular)
+    plate_mask = create_circular_mask(gray_image.shape)
+
+    # Segment the image
+    labeled = segment_image(
+        gray_image,
+        mask=plate_mask,
+        min_area=int(min_area),
+        blur_sigma=1.0,
+        remove_border=True,
+    )
+
+    return labeled
