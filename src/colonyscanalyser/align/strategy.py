@@ -1,7 +1,7 @@
 from enum import Enum, auto
 from typing import List, Tuple, Union
 
-from ..core.image_file import ImageFile
+from ..models.image import ImageFile
 from .transform import AlignTransform
 
 
@@ -25,27 +25,28 @@ def calculate_transformation_strategy(
         ProjectiveTransform,
         SimilarityTransform,
     )
+
     from .transform import FastFourierAlignTransform
-    
+
     shift_index = 0
-    
+
     if len(images) <= 1 or strategy == AlignStrategy.none:
         return None, images
-    
+
     TRANSFORM_CLASSES = {
         "euclidean": EuclideanTransform,
         "similarity": SimilarityTransform,
         "affine": AffineTransform,
         "projective": ProjectiveTransform,
     }
-    
+
     transform_type = transform_type.lower()
     if transform_type not in TRANSFORM_CLASSES:
         raise ValueError(f"the transformation type {transform_type} is not implemented")
     transform_model = TRANSFORM_CLASSES[transform_type]
-    
+
     align_model = FastFourierAlignTransform(images[0].image, transform_model)
-    
+
     return align_model, images[shift_index:]
 
 

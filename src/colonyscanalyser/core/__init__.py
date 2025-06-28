@@ -1,45 +1,12 @@
 """
-Core domain logic package for ColonyScanalyser.
+Legacy core package for ColonyScanalyser.
 
-This package contains the core domain classes and business logic for
-colony analysis, including Colony, Plate, ImageFile, and related functionality.
+This package contains legacy configuration classes that are still used
+by the CLI for backward compatibility. New code should use the models/
+and services/ packages instead.
 """
 
-from .base import (
-    Identified,
-    IdentifiedCollection,
-    Named,
-    TimeStamped,
-    TimeStampElapsed,
-    Unique,
-)
-from .colony import (
-    Colony,
-    colonies_filtered,
-    colonies_from_timepoints,
-    timepoints_from_image,
-)
-from .growth_curve import GrowthCurve
-from .image_file import ImageFile, ImageFileCollection
-from .plate import Plate, PlateCollection
+# Note: Only config.py remains in this package for CLI compatibility
+# All other functionality has been moved to models/ and services/
 
-__all__ = [
-    # Base classes
-    "Identified",
-    "IdentifiedCollection",
-    "Named",
-    "Unique",
-    "TimeStamped",
-    "TimeStampElapsed",
-    # Core domain classes
-    "Colony",
-    "GrowthCurve",
-    "ImageFile",
-    "ImageFileCollection",
-    "Plate",
-    "PlateCollection",
-    # Colony analysis functions
-    "colonies_filtered",
-    "colonies_from_timepoints",
-    "timepoints_from_image",
-]
+__all__ = []
